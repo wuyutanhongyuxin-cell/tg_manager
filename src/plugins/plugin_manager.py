@@ -131,9 +131,16 @@ class PluginManager:
                 logger.error("卸载插件 %s 失败: %s", name, e, exc_info=True)
             del self._plugins[name]
 
-        # 重新发现并加载（清除 Python 模块缓存以确保热重载）
+        # 重新发现并加载（仅清除目标插件的模块缓存，避免影响其他运行中的插件）
         import sys
-        stale_keys = [k for k in sys.modules if k.startswith("src.plugins.") and k != "src.plugins.plugin_base"]
+        # 根据插件名推断模块路径，如 "channel.mirror" → "src.plugins.channel.mirror"
+        parts = name.split(".")
+        target_prefix = f"src.plugins.{'.'.join(parts[:1])}" if parts else ""
+        stale_keys = [
+            k for k in sys.modules
+            if k.startswith("src.plugins.") and k != "src.plugins.plugin_base"
+            and (target_prefix and k.startswith(target_prefix))
+        ]
         for k in stale_keys:
             del sys.modules[k]
 

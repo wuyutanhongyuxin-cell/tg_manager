@@ -56,6 +56,24 @@
 - **修复**：固定为 `apscheduler>=3.10,<4.0`
 - **规则**：有重大版本破坏性变更的依赖，requirements.txt 必须固定大版本上限
 
+### [2026-04-09] 转发插件必须检查 event.out 防止循环
+- **现象**：forwarder 处理新消息时未排除自己发出的消息，copy/copy_clean 模式下产生的 send_message 又触发 NewMessage 事件
+- **原因**：Telethon 的 `event.out` 标记自己发出的消息，未检查导致无限循环
+- **修复**：在 `_on_new_message` 开头添加 `if event.out: return`
+- **规则**：注册 Telethon NewMessage 处理器时必须考虑是否需要过滤 `event.out`
+
+### [2026-04-09] 速率限制器两阶段锁需预留槽位
+- **现象**：多个协程在 phase 1（锁内计算延迟）和 phase 2（锁外 sleep）之间，都能通过同一个限速窗口检查
+- **原因**：经典 TOCTOU（Time-of-check to time-of-use）竞态
+- **修复**：在锁内计算延迟时同步预留时间戳（append future_ts），后续协程看到已占用的槽位
+- **规则**：限速器的「检查-等待-记录」三步，至少「检查+记录」必须在同一个锁区间内
+
+### [2026-04-09] SSRF 防护：URL 获取前必须验证目标地址
+- **现象**：content_summarizer 直接 httpx.get(url)，用户可指定内网/回环地址
+- **原因**：未验证 URL 解析后的 IP 是否为私网地址
+- **修复**：新增 `is_safe_url()` 函数，解析域名后检查 IP 是否 private/loopback/link_local
+- **规则**：任何接受外部 URL 输入并发起 HTTP 请求的地方，必须先验证 URL 安全性
+
 ### [2026-04-09] LLM Provider 的 system 消息处理差异
 - **现象**：Claude API 要求 `system` 作为顶层参数，不能放在 messages 数组里；Gemini 使用 `systemInstruction` 字段
 - **原因**：各 LLM API 设计不统一

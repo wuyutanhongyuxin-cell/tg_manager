@@ -133,20 +133,15 @@ class RateLimiter:
             else:
                 delay += self._add_jitter()
 
-        # 锁外执行实际等待
+        # 锁外执行实际等待（时间戳已在锁内预留，无需再次更新）
         if delay > 0:
             await asyncio.sleep(delay)
 
-        # 锁内更新时间戳（仅消息操作需要）
-        if operation == "message":
-            async with self._lock:
-                now = time.time()
-                if chat_id is not None:
-                    self._chat_last_send[chat_id] = now
-                self._global_timestamps.append(now)
-
     def _calc_message_delay(self, chat_id: int | None) -> float:
-        """在锁内计算消息操作需要的等待时间（不执行 sleep）。"""
+        """在锁内计算消息操作需要的等待时间，并预留时间槽位（防止 TOCTOU 竞态）。
+
+        预留时间戳确保并发调用方看到已占用的槽位，避免同时通过限速检查。
+        """
         now = time.time()
         delay = 0.0
         # 清理超过一分钟的时间戳
@@ -162,6 +157,11 @@ class RateLimiter:
                 chat_delay = self._per_chat_interval - elapsed + self._add_jitter()
                 logger.debug("聊天 %d 限速，等待 %.1f 秒", chat_id, chat_delay)
                 delay = max(delay, chat_delay)
+        # 预留时间槽位：在锁内记录，防止多个协程同时通过限速检查
+        future_ts = now + delay
+        self._global_timestamps.append(future_ts)
+        if chat_id is not None:
+            self._chat_last_send[chat_id] = future_ts
         return delay
 
     async def handle_flood_wait(self, seconds: int) -> None:

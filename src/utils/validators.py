@@ -3,7 +3,9 @@
 提供 Telegram 聊天 ID、用户名、URL 验证以及文件名清理功能。
 """
 
+import ipaddress
 import re
+import socket
 
 # Telegram 用户名正则：以 @ 开头，5-32 个字母数字或下划线
 _USERNAME_PATTERN = re.compile(r"^@[a-zA-Z][a-zA-Z0-9_]{4,31}$")
@@ -71,6 +73,36 @@ def is_valid_url(value: str) -> bool:
     if not isinstance(value, str):
         return False
     return bool(_URL_PATTERN.match(value))
+
+
+def is_safe_url(value: str) -> bool:
+    """验证 URL 是否安全可访问（防止 SSRF）
+
+    检查 URL 格式合法性，并确保解析后的 IP 不是内网/回环/链路本地地址。
+
+    Args:
+        value: 待验证的 URL 字符串
+
+    Returns:
+        URL 格式合法且目标不是内网地址时返回 True
+    """
+    if not is_valid_url(value):
+        return False
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(value)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # 解析域名获取 IP 地址
+        addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC)
+        for _, _, _, _, sockaddr in addr_info:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return False
+        return True
+    except (socket.gaierror, ValueError, OSError):
+        return False
 
 
 def sanitize_filename(name: str) -> str:

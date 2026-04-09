@@ -7,6 +7,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+from telethon.errors import FloodWaitError as TelethonFloodWaitError
 from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.types import ChatBannedRights
 
@@ -69,6 +70,8 @@ class AdminActionsPlugin(PluginBase):
             await self.event_bus.emit(
                 "user_banned", chat_id=chat_id, user_id=user_id, reason=reason
             )
+        except TelethonFloodWaitError as e:
+            await self.client.userbot._handle_flood_wait(e)
         except Exception as e:
             self.logger.error("封禁用户 %d 失败: %s", user_id, e)
 
@@ -102,6 +105,8 @@ class AdminActionsPlugin(PluginBase):
             await self.event_bus.emit(
                 "user_muted", chat_id=chat_id, user_id=user_id, duration=duration
             )
+        except TelethonFloodWaitError as e:
+            await self.client.userbot._handle_flood_wait(e)
         except Exception as e:
             self.logger.error("禁言用户 %d 失败: %s", user_id, e)
 
@@ -140,6 +145,8 @@ class AdminActionsPlugin(PluginBase):
             await self.event_bus.emit(
                 "user_kicked", chat_id=chat_id, user_id=user_id
             )
+        except TelethonFloodWaitError as e:
+            await self.client.userbot._handle_flood_wait(e)
         except Exception as e:
             self.logger.error("踢出用户 %d 失败: %s", user_id, e)
 

@@ -66,29 +66,28 @@ class CronSenderPlugin(PluginBase):
                 self.logger.warning("加载任务 '%s' 失败: %s", job.name, e)
         self.logger.info("从数据库加载了 %d 个定时任务", loaded)
 
+    def _parse_cron_trigger(self, cron_expr: str):
+        """解析并验证 cron 表达式，返回 CronTrigger 实例"""
+        parts = cron_expr.strip().split()
+        if len(parts) != 5:
+            raise PluginError(f"无效 cron 表达式: '{cron_expr}'（需要 5 个字段）")
+        try:
+            return self._CronTrigger(
+                minute=parts[0], hour=parts[1], day=parts[2],
+                month=parts[3], day_of_week=parts[4], timezone=self._timezone,
+            )
+        except Exception as e:
+            raise PluginError(f"无效 cron 表达式: '{cron_expr}' — {e}") from e
+
     def _add_scheduler_job(
         self, job_id: int, cron_expr: str, chat_id: int, text: str
     ) -> None:
         """向 APScheduler 添加一个 cron 任务"""
-        # 解析 cron 表达式（分 时 日 月 周）
-        parts = cron_expr.strip().split()
-        if len(parts) != 5:
-            raise PluginError(f"无效 cron 表达式: '{cron_expr}'（需要 5 个字段）")
-
-        trigger = self._CronTrigger(
-            minute=parts[0],
-            hour=parts[1],
-            day=parts[2],
-            month=parts[3],
-            day_of_week=parts[4],
-            timezone=self._timezone,
-        )
+        trigger = self._parse_cron_trigger(cron_expr)
         self._scheduler.add_job(
-            self._execute_send,
-            trigger=trigger,
+            self._execute_send, trigger=trigger,
             args=[job_id, chat_id, text],
-            id=f"cron_{job_id}",
-            replace_existing=True,
+            id=f"cron_{job_id}", replace_existing=True,
         )
 
     async def _execute_send(self, job_id: int, chat_id: int, text: str) -> None:
@@ -120,6 +119,9 @@ class CronSenderPlugin(PluginBase):
             return
 
         try:
+            # 先验证 cron 表达式（避免 DB 写入后调度器注册失败导致状态不一致）
+            self._parse_cron_trigger(cron_expr)
+
             # 保存到数据库
             session = self.db.get_session()
             async with session:
@@ -135,7 +137,7 @@ class CronSenderPlugin(PluginBase):
                     )
                     job_id = job.id
 
-            # 注册到调度器
+            # 注册到调度器（cron 已验证，此步骤不应再因格式失败）
             self._add_scheduler_job(job_id, cron_expr, chat_id, text)
             if reply_to:
                 await self.client.send_message(
@@ -154,11 +156,7 @@ class CronSenderPlugin(PluginBase):
             return
 
         try:
-            # 从调度器移除
-            scheduler_id = f"cron_{job_id}"
-            if self._scheduler.get_job(scheduler_id):
-                self._scheduler.remove_job(scheduler_id)
-            # 数据库标记禁用
+            # 先在数据库标记禁用（崩溃安全：重启后不会重新加载已禁用任务）
             session = self.db.get_session()
             async with session:
                 async with session.begin():
@@ -166,6 +164,10 @@ class CronSenderPlugin(PluginBase):
                     job = await repo.get_by_id(job_id)
                     if job:
                         await repo.update(job, is_enabled=False)
+            # 再从调度器移除
+            scheduler_id = f"cron_{job_id}"
+            if self._scheduler.get_job(scheduler_id):
+                self._scheduler.remove_job(scheduler_id)
             if reply_to:
                 await self.client.send_message(reply_to, f"✅ 定时任务 #{job_id} 已停止")
         except Exception as e:
@@ -177,23 +179,18 @@ class CronSenderPlugin(PluginBase):
         reply_to = kwargs.get("reply_to_chat")
         if not reply_to:
             return
-
         session = self.db.get_session()
         async with session:
             repo = ScheduleRepository(session)
             jobs = await repo.get_enabled()
-
         if not jobs:
             await self.client.send_message(reply_to, "暂无定时任务。")
             return
-
         lines = ["📋 定时任务列表：\n"]
         for job in jobs:
             last = job.last_run_at.strftime("%m-%d %H:%M") if job.last_run_at else "从未"
             lines.append(
-                f"#{job.id} {job.name}\n"
-                f"  Cron: {job.cron_expr}\n"
-                f"  目标: {job.target_chat_id}\n"
-                f"  上次执行: {last} (共{job.run_count}次)"
+                f"#{job.id} {job.name}\n  Cron: {job.cron_expr}\n"
+                f"  目标: {job.target_chat_id}\n  上次执行: {last} (共{job.run_count}次)"
             )
         await self.client.send_message(reply_to, "\n".join(lines))

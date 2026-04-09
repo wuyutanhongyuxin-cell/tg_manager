@@ -1,8 +1,4 @@
-"""
-TG Manager 配置加载与验证模块。
-
-通过 .env 加载环境变量，再解析 YAML 配置文件并进行变量替换。
-"""
+"""配置加载与验证 — .env 环境变量 + YAML 配置解析。"""
 
 from __future__ import annotations
 
@@ -95,15 +91,7 @@ class Config:
     _raw: dict[str, Any] = field(default_factory=dict, repr=False)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """从原始配置中获取顶层键的值。
-
-        Args:
-            key: 配置键名。
-            default: 键不存在时的默认值。
-
-        Returns:
-            对应的配置值。
-        """
+        """从原始配置中获取顶层键的值。"""
         return self._raw.get(key, default)
 
     @property
@@ -142,6 +130,13 @@ def _validate_config(config: Config) -> None:
     if missing:
         raise ConfigError(f"缺少必填配置字段: {', '.join(missing)}")
 
+    # 验证数值字段类型（避免运行时 ValueError）
+    for field_name in ("api_id", "admin_user_id"):
+        try:
+            int(config.telegram.get(field_name))
+        except (ValueError, TypeError):
+            raise ConfigError(f"配置字段 {field_name} 必须为整数")
+
 
 def load_config(
     config_path: str = DEFAULT_CONFIG_PATH,
@@ -177,6 +172,8 @@ def load_config(
             raw_data: dict[str, Any] = yaml.safe_load(f) or {}
     except yaml.YAMLError as e:
         raise ConfigError(f"YAML 解析失败: {e}") from e
+    except OSError as e:
+        raise ConfigError(f"配置文件读取失败: {e}") from e
 
     # 替换环境变量
     data = _substitute_env_vars(raw_data)

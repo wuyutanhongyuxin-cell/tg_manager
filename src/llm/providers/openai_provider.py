@@ -79,6 +79,8 @@ class OpenAIProvider(BaseLLMProvider):
                         yield text
         except httpx.HTTPStatusError as e:
             raise LLMError(f"OpenAI 流式错误: {e}") from e
+        except httpx.RequestError as e:
+            raise LLMError(f"OpenAI 流式请求失败: {e}") from e
 
     def _build_payload(
         self, messages: list[ChatMessage], stream: bool = False, **kwargs: Any

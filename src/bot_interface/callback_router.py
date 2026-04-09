@@ -60,3 +60,4 @@ class CallbackRouter:
                     return
 
             logger.warning(f"未匹配的回调: {data}")
+            await event.answer()

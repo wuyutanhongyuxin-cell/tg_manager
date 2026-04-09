@@ -97,6 +97,30 @@
 ### 修复项
 - [x] APScheduler 版本固定 `>=3.10,<4.0`（4.x 有破坏性 API 变更）
 
+## 代码审查 #2 ✅（2026-04-09）
+三模型审查：Codex (gpt-5.3-codex, high) + Sonnet 4.6 + Opus 4.6 裁定
+
+### 已修复（13 项）
+- [x] **HIGH**: forwarder.py 缺少 `event.out` 守卫导致转发循环 → 添加
+- [x] **HIGH**: rate_limiter.py 两阶段锁 TOCTOU 竞态 → phase 1 预留时间戳
+- [x] **HIGH**: `reset_flood_counter()` 从未调用 → bot/userbot 成功后调用
+- [x] **HIGH**: cron_sender DB/Scheduler 状态不一致 → 先验证 cron 再写 DB；remove 先更新 DB
+- [x] **HIGH**: content_summarizer SSRF 漏洞 → 添加 `is_safe_url()` 私网 IP 检查
+- [x] **MEDIUM**: plugin_manager `sys.modules` 清除范围过大 → 缩窄到目标插件
+- [x] **MEDIUM**: admin_actions 绕过 RateLimiter 和 FloodWait → 添加 FloodWait 处理
+- [x] **MEDIUM**: `ask_ai` 事件无订阅者 → 新建 ask_handler.py 插件
+- [x] **MEDIUM**: callback_router 未匹配回调未 answer → 添加 `event.answer()`
+- [x] **MEDIUM**: config.py 数值字段无类型验证 → 启动时验证 api_id/admin_user_id
+- [x] **MEDIUM**: LLM providers chat_stream 未捕获 RequestError → 全部添加
+- [x] **MEDIUM**: config.py load_config 仅捕获 YAMLError → 添加 OSError
+- [x] **驳回**: Sonnet 认为 sender.py PeerChannel 乘数 10^12 错误 → 实际正确
+
+### 未采纳
+- event_bus 吞异常（有意设计，已文档化）
+- get_or_create 竞态（单客户端 SQLite 极低风险）
+- message upsert 字段不全（刻意只更新可变字段）
+- schema 缺 FK（Telegram ID 是外部标识符）
+
 ## Phase 4: 完善与高级功能
 - [ ] 反垃圾插件组
 - [ ] 媒体插件组

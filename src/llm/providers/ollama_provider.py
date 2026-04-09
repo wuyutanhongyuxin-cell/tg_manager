@@ -85,6 +85,8 @@ class OllamaProvider(BaseLLMProvider):
                         continue
         except httpx.HTTPStatusError as e:
             raise LLMError(f"Ollama 流式错误: {e}") from e
+        except httpx.RequestError as e:
+            raise LLMError(f"Ollama 流式请求失败: {e}") from e
 
     def _build_payload(
         self,

@@ -44,6 +44,9 @@ class ForwarderPlugin(PluginBase):
 
     async def _on_new_message(self, event: events.NewMessage.Event) -> None:
         """处理新消息，检查是否匹配转发规则"""
+        # 忽略自己发出的消息，防止转发循环
+        if event.out:
+            return
         try:
             chat_id = event.chat_id
             # 查询该聊天的转发规则

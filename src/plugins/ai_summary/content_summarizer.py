@@ -83,7 +83,13 @@ class ContentSummarizerPlugin(PluginBase):
             self.logger.error("内容总结异常: %s", e)
 
     async def _fetch_content(self, url: str) -> str:
-        """获取 URL 内容并提取正文"""
+        """获取 URL 内容并提取正文（含 SSRF 防护）"""
+        # SSRF 防护：验证 URL 格式且目标非内网地址
+        from src.utils.validators import is_safe_url
+        if not is_safe_url(url):
+            self.logger.warning("URL 安全检查未通过（内网或无效地址）: %s", url)
+            return ""
+
         try:
             async with httpx.AsyncClient(timeout=FETCH_TIMEOUT) as client:
                 resp = await client.get(url, follow_redirects=True)

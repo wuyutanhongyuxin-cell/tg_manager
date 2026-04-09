@@ -78,7 +78,9 @@ class BotClient:
         cid = chat_id if isinstance(chat_id, int) else None
         await self._rate_limiter.acquire("message", chat_id=cid)
         try:
-            return await self._client.send_message(chat_id, text, **kwargs)
+            result = await self._client.send_message(chat_id, text, **kwargs)
+            self._rate_limiter.reset_flood_counter()
+            return result
         except TelethonFloodWaitError as e:
             await self._handle_flood_wait(e)
             return await self._client.send_message(chat_id, text, **kwargs)
