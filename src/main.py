@@ -118,6 +118,12 @@ async def main() -> None:
     summary_handler = SummaryHandler(config, event_bus)
     summary_handler.register(command_router)
 
+    # 注册菜单按钮 catch-all（功能模块尚在开发中）
+    async def _menu_callback(event, data):
+        await event.answer("该功能模块开发中，敬请期待")
+
+    callback_router.register("menu_", _menu_callback)
+
     command_router.setup()
     callback_router.setup()
 

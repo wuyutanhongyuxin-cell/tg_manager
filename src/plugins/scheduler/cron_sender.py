@@ -43,9 +43,9 @@ class CronSenderPlugin(PluginBase):
         self.logger.info("定时发送插件已启动，时区: %s", self._timezone)
 
     async def teardown(self) -> None:
-        """停止调度器并取消事件订阅"""
+        """停止调度器（等待正在执行的任务完成）并取消事件订阅"""
         if hasattr(self, "_scheduler") and self._scheduler.running:
-            self._scheduler.shutdown(wait=False)
+            self._scheduler.shutdown(wait=True)
         await self.event_bus.unsubscribe("schedule_add", self._handle_add)
         await self.event_bus.unsubscribe("schedule_remove", self._handle_remove)
         await self.event_bus.unsubscribe("schedule_list", self._handle_list)
@@ -60,30 +60,33 @@ class CronSenderPlugin(PluginBase):
         loaded = 0
         for job in jobs:
             try:
-                self._add_scheduler_job(job.id, job.cron_expr, job.target_chat_id, job.message_text)
+                tz = getattr(job, "timezone", None) or self._timezone
+                self._add_scheduler_job(job.id, job.cron_expr, job.target_chat_id, job.message_text, tz)
                 loaded += 1
             except Exception as e:
                 self.logger.warning("加载任务 '%s' 失败: %s", job.name, e)
         self.logger.info("从数据库加载了 %d 个定时任务", loaded)
 
-    def _parse_cron_trigger(self, cron_expr: str):
+    def _parse_cron_trigger(self, cron_expr: str, timezone: str | None = None):
         """解析并验证 cron 表达式，返回 CronTrigger 实例"""
         parts = cron_expr.strip().split()
         if len(parts) != 5:
             raise PluginError(f"无效 cron 表达式: '{cron_expr}'（需要 5 个字段）")
+        tz = timezone or self._timezone
         try:
             return self._CronTrigger(
                 minute=parts[0], hour=parts[1], day=parts[2],
-                month=parts[3], day_of_week=parts[4], timezone=self._timezone,
+                month=parts[3], day_of_week=parts[4], timezone=tz,
             )
         except Exception as e:
             raise PluginError(f"无效 cron 表达式: '{cron_expr}' — {e}") from e
 
     def _add_scheduler_job(
-        self, job_id: int, cron_expr: str, chat_id: int, text: str
+        self, job_id: int, cron_expr: str, chat_id: int, text: str,
+        timezone: str | None = None,
     ) -> None:
         """向 APScheduler 添加一个 cron 任务"""
-        trigger = self._parse_cron_trigger(cron_expr)
+        trigger = self._parse_cron_trigger(cron_expr, timezone)
         self._scheduler.add_job(
             self._execute_send, trigger=trigger,
             args=[job_id, chat_id, text],

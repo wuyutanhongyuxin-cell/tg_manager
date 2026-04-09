@@ -54,8 +54,11 @@ class AdminActionsPlugin(PluginBase):
 
         kwargs: chat_id, user_id, reason(可选)
         """
-        chat_id = kwargs["chat_id"]
-        user_id = kwargs["user_id"]
+        chat_id = kwargs.get("chat_id")
+        user_id = kwargs.get("user_id")
+        if not chat_id or not user_id:
+            self.logger.warning("ban_user 事件缺少 chat_id 或 user_id")
+            return
         reason = kwargs.get("reason", "")
 
         rights = ChatBannedRights(
@@ -80,8 +83,11 @@ class AdminActionsPlugin(PluginBase):
 
         kwargs: chat_id, user_id, duration(秒，可选，默认1小时)
         """
-        chat_id = kwargs["chat_id"]
-        user_id = kwargs["user_id"]
+        chat_id = kwargs.get("chat_id")
+        user_id = kwargs.get("user_id")
+        if not chat_id or not user_id:
+            self.logger.warning("mute_user 事件缺少 chat_id 或 user_id")
+            return
         duration = kwargs.get("duration", 3600)
 
         until = datetime.now(timezone.utc) + timedelta(seconds=duration)
@@ -115,8 +121,11 @@ class AdminActionsPlugin(PluginBase):
 
         kwargs: chat_id, user_id, reason(可选)
         """
-        chat_id = kwargs["chat_id"]
-        user_id = kwargs["user_id"]
+        chat_id = kwargs.get("chat_id")
+        user_id = kwargs.get("user_id")
+        if not chat_id or not user_id:
+            self.logger.warning("warn_user 事件缺少 chat_id 或 user_id")
+            return
         reason = kwargs.get("reason", "")
 
         warn_count = await self._increment_warn(user_id)
@@ -137,8 +146,11 @@ class AdminActionsPlugin(PluginBase):
 
         kwargs: chat_id, user_id
         """
-        chat_id = kwargs["chat_id"]
-        user_id = kwargs["user_id"]
+        chat_id = kwargs.get("chat_id")
+        user_id = kwargs.get("user_id")
+        if not chat_id or not user_id:
+            self.logger.warning("kick_user 事件缺少 chat_id 或 user_id")
+            return
         try:
             await self.client.userbot.client.kick_participant(chat_id, user_id)
             self.logger.info("已踢出用户 %d (chat: %d)", user_id, chat_id)

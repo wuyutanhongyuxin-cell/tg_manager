@@ -55,8 +55,13 @@ class AdminHandler:
             await event.reply("用法: /ban <user_id> [原因]\n或回复目标消息使用 /ban")
             return
 
+        # 回复消息时 user_id 来自 replied，命令参数全部是 reason
+        replied = await event.get_reply_message()
         parts = event.raw_text.split(maxsplit=2)
-        reason = parts[2] if len(parts) > 2 else ""
+        if replied and replied.sender_id:
+            reason = event.raw_text.split(maxsplit=1)[1] if len(parts) > 1 else ""
+        else:
+            reason = parts[2] if len(parts) > 2 else ""
         await self._event_bus.emit(
             "ban_user", chat_id=event.chat_id, user_id=user_id, reason=reason
         )
@@ -92,8 +97,12 @@ class AdminHandler:
             await event.reply("用法: /warn <user_id> [原因]\n或回复目标消息使用 /warn")
             return
 
+        replied = await event.get_reply_message()
         parts = event.raw_text.split(maxsplit=2)
-        reason = parts[2] if len(parts) > 2 else ""
+        if replied and replied.sender_id:
+            reason = event.raw_text.split(maxsplit=1)[1] if len(parts) > 1 else ""
+        else:
+            reason = parts[2] if len(parts) > 2 else ""
         await self._event_bus.emit(
             "warn_user", chat_id=event.chat_id, user_id=user_id, reason=reason
         )

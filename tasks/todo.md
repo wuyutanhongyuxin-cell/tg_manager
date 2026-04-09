@@ -115,6 +115,16 @@
 - [x] **MEDIUM**: config.py load_config 仅捕获 YAMLError → 添加 OSError
 - [x] **驳回**: Sonnet 认为 sender.py PeerChannel 乘数 10^12 错误 → 实际正确
 
+### 补充修复（Sonnet 完整版新增 8 项）
+- [x] **HIGH**: welcome.py 用户名模板注入 → 转义 `{}`
+- [x] **HIGH**: cron_sender `shutdown(wait=False)` → 改为 `wait=True`
+- [x] **HIGH**: admin_actions `kwargs["key"]` 硬取值 → 改为 `.get()` + 验证
+- [x] **HIGH**: `menu_*` 回调无处理器 → main.py 注册 catch-all
+- [x] **LOW**: admin_handler 回复封禁时 reason 解析错误 → 区分 reply/参数来源
+- [x] **LOW**: plugin_handler `replace` → `removeprefix`
+- [x] **LOW**: database/__init__.py 缺少 ScheduledJob 导出 → 添加
+- [x] **LOW**: cron_sender timezone 未从 DB 读取 → 使用 job.timezone
+
 ### 未采纳
 - event_bus 吞异常（有意设计，已文档化）
 - get_or_create 竞态（单客户端 SQLite 极低风险）

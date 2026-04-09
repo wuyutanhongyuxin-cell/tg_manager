@@ -59,13 +59,15 @@ class WelcomePlugin(PluginBase):
             if not user:
                 return
 
-            # 渲染欢迎消息模板
+            # 渲染欢迎消息模板（转义用户可控字段中的花括号，防止模板注入）
             user_name = self._get_display_name(user)
             chat_title = getattr(chat, "title", "群组")
+            safe_name = user_name.replace("{", "{{").replace("}", "}}")
+            safe_title = chat_title.replace("{", "{{").replace("}", "}}")
             welcome_text = self._template.format(
-                user_name=user_name,
+                user_name=safe_name,
                 user_id=user.id,
-                chat_title=chat_title,
+                chat_title=safe_title,
                 chat_id=event.chat_id,
             )
 

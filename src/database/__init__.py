@@ -6,7 +6,7 @@
 
 from .base import Base
 from .engine import DatabaseManager
-from .models import AutoReplyRule, Chat, ForwardRule, TelegramMessage, User
+from .models import AutoReplyRule, Chat, ForwardRule, ScheduledJob, TelegramMessage, User
 
 __all__ = [
     "AutoReplyRule",
@@ -14,6 +14,7 @@ __all__ = [
     "Chat",
     "DatabaseManager",
     "ForwardRule",
+    "ScheduledJob",
     "TelegramMessage",
     "User",
 ]

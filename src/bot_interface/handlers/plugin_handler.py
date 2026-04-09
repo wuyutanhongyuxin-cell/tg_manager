@@ -72,7 +72,7 @@ class PluginHandler:
         if event.sender_id != self._admin_id:
             await event.answer("⛔ 无权限")
             return
-        plugin_name = data.replace("plugin_", "")
+        plugin_name = data.removeprefix("plugin_")
         plugin = self._pm.get_plugin(plugin_name)
         if plugin:
             info = f"📦 **{plugin.name}**\n\n{plugin.description}"
