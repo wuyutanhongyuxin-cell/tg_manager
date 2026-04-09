@@ -1,0 +1,106 @@
+"""消息记录 Repository
+
+提供消息的存储、查询和批量操作。
+"""
+
+import logging
+from typing import Optional, Sequence
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..models.message import TelegramMessage
+from .base_repo import BaseRepository
+
+logger = logging.getLogger(__name__)
+
+
+class MessageRepository(BaseRepository[TelegramMessage]):
+    """消息 CRUD 操作"""
+
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, TelegramMessage)
+
+    async def get_by_chat_and_msg_id(
+        self, chat_id: int, message_id: int
+    ) -> Optional[TelegramMessage]:
+        """根据聊天 ID + 消息 ID 查询（唯一索引）"""
+        stmt = select(TelegramMessage).where(
+            TelegramMessage.chat_id == chat_id,
+            TelegramMessage.message_id == message_id,
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_chat(
+        self, chat_id: int, limit: int = 100, offset: int = 0
+    ) -> Sequence[TelegramMessage]:
+        """获取某个聊天的消息列表（按时间倒序）"""
+        stmt = (
+            select(TelegramMessage)
+            .where(TelegramMessage.chat_id == chat_id)
+            .order_by(TelegramMessage.date.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def search_text(
+        self, keyword: str, chat_id: Optional[int] = None, limit: int = 50
+    ) -> Sequence[TelegramMessage]:
+        """搜索包含关键词的消息
+
+        Args:
+            keyword: 搜索关键词
+            chat_id: 限定聊天（空=全局搜索）
+            limit: 结果数量上限
+        """
+        stmt = select(TelegramMessage).where(
+            TelegramMessage.text.contains(keyword)
+        )
+        if chat_id is not None:
+            stmt = stmt.where(TelegramMessage.chat_id == chat_id)
+        stmt = stmt.order_by(TelegramMessage.date.desc()).limit(limit)
+        result = await self._session.execute(stmt)
+        return result.scalars().all()
+
+    async def upsert(self, **kwargs) -> TelegramMessage:
+        """插入或更新消息（基于 chat_id + message_id 去重）
+
+        使用数据库级别的 INSERT ... ON CONFLICT 保证原子性，
+        避免 SELECT-then-INSERT 的竞态条件。
+        """
+        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+        update_fields = {k: kwargs[k] for k in ("text", "views", "is_pinned", "raw_data") if k in kwargs}
+        stmt = sqlite_insert(TelegramMessage).values(**kwargs)
+        if update_fields:
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["chat_id", "message_id"],
+                set_=update_fields,
+            )
+        else:
+            stmt = stmt.on_conflict_do_nothing(
+                index_elements=["chat_id", "message_id"],
+            )
+        await self._session.execute(stmt)
+        await self._session.flush()
+        # 返回最终记录
+        return await self.get_by_chat_and_msg_id(kwargs["chat_id"], kwargs["message_id"])
+
+    async def get_forwarded(
+        self, chat_id: int, limit: int = 50
+    ) -> Sequence[TelegramMessage]:
+        """获取某聊天中的转发消息"""
+        stmt = (
+            select(TelegramMessage)
+            .where(
+                TelegramMessage.chat_id == chat_id,
+                TelegramMessage.is_forward.is_(True),
+            )
+            .order_by(TelegramMessage.date.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalars().all()

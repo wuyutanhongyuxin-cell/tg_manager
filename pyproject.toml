@@ -1,0 +1,17 @@
+[project]
+name = "tg-manager"
+version = "0.1.0"
+description = "全功能 Telegram 管理工具"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

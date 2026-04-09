@@ -1,0 +1,29 @@
+# 核心
+telethon>=1.36.0
+sqlalchemy[asyncio]>=2.0
+aiosqlite>=0.19
+asyncpg>=0.29
+apscheduler>=3.10
+pyyaml>=6.0
+python-dotenv>=1.0
+
+# LLM
+httpx>=0.27
+tiktoken>=0.7
+anthropic>=0.39
+
+# AI 总结辅助
+feedparser>=6.0
+beautifulsoup4>=4.12
+readability-lxml>=0.8
+yt-dlp>=2024.0
+
+# 媒体
+Pillow>=10.0
+aiofiles>=23.0
+
+# 反垃圾
+captcha>=0.5
+
+# 导出
+jinja2>=3.1

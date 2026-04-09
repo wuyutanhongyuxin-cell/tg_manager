@@ -1,0 +1,19 @@
+"""数据库 Repository 层
+
+提供所有模型的 CRUD 操作封装。
+业务代码通过 Repository 访问数据库，不直接写 SQL。
+"""
+
+from .base_repo import BaseRepository
+from .chat_repo import ChatRepository
+from .forward_rule_repo import ForwardRuleRepository
+from .message_repo import MessageRepository
+from .rule_repo import RuleRepository
+
+__all__ = [
+    "BaseRepository",
+    "ChatRepository",
+    "ForwardRuleRepository",
+    "MessageRepository",
+    "RuleRepository",
+]
