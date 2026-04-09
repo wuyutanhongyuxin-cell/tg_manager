@@ -25,12 +25,14 @@ from src.core.constants import (
 )
 from src.database import DatabaseManager
 from src.clients import DualClient
+from src.llm import LLMManager
 from src.plugins import PluginManager
 from src.bot_interface import CommandRouter, CallbackRouter
 from src.bot_interface.handlers.admin_handler import AdminHandler
 from src.bot_interface.handlers.config_handler import ConfigHandler
 from src.bot_interface.handlers.plugin_handler import PluginHandler
 from src.bot_interface.handlers.start_handler import StartHandler
+from src.bot_interface.handlers.summary_handler import SummaryHandler
 
 logger = logging.getLogger(__name__)
 
@@ -81,21 +83,26 @@ async def main() -> None:
     event_bus = EventBus()
     rate_limiter = RateLimiter(config.rate_limit)
 
-    # 4. 启动双客户端
+    # 4. 初始化 LLM 管理器
+    llm_manager = LLMManager(config)
+    llm_manager.init()
+    logger.info("LLM 管理器初始化完成")
+
+    # 5. 启动双客户端
     client = DualClient(config, rate_limiter, event_bus)
     await client.start()
     logger.info("双客户端启动完成")
 
-    # 5. 注册 Bot 命令路由
+    # 6. 注册 Bot 命令路由
     command_router = CommandRouter(client.bot)
     callback_router = CallbackRouter(client.bot)
 
-    # 6. 加载插件
-    plugin_manager = PluginManager(client, config, event_bus, db)
+    # 7. 加载插件（传入 LLM 管理器供 AI 插件使用）
+    plugin_manager = PluginManager(client, config, event_bus, db, llm=llm_manager)
     await plugin_manager.load_all()
     logger.info("插件加载完成")
 
-    # 7. 注册所有命令处理器
+    # 8. 注册所有命令处理器
     start_handler = StartHandler(config, plugin_manager)
     start_handler.register(command_router)
 
@@ -107,6 +114,9 @@ async def main() -> None:
 
     config_handler = ConfigHandler(config)
     config_handler.register(command_router)
+
+    summary_handler = SummaryHandler(config, event_bus)
+    summary_handler.register(command_router)
 
     command_router.setup()
     callback_router.setup()
@@ -132,6 +142,7 @@ async def main() -> None:
         logger.info("正在关闭...")
         await plugin_manager.unload_all()
         await client.stop()
+        await llm_manager.close()
         await db.close()
         logger.info(f"{APP_NAME} 已关闭")
 

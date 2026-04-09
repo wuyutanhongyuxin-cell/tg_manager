@@ -3,7 +3,7 @@ telethon>=1.36.0
 sqlalchemy[asyncio]>=2.0
 aiosqlite>=0.19
 asyncpg>=0.29
-apscheduler>=3.10
+apscheduler>=3.10,<4.0
 pyyaml>=6.0
 python-dotenv>=1.0
 

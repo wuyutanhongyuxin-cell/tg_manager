@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from src.core.config import Config
     from src.core.event_bus import EventBus
     from src.database.engine import DatabaseManager
+    from src.llm.provider_factory import LLMManager
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class PluginManager:
         config: "Config",
         event_bus: "EventBus",
         db: "DatabaseManager",
+        llm: "LLMManager | None" = None,
     ) -> None:
         """初始化插件管理器
 
@@ -41,11 +43,13 @@ class PluginManager:
             config: 全局配置对象
             event_bus: 事件总线
             db: 数据库管理器
+            llm: LLM 管理器（AI 插件使用，可选）
         """
         self._client = client
         self._config = config
         self._event_bus = event_bus
         self._db = db
+        self._llm = llm
         self._loader = PluginLoader()
         self._plugins: dict[str, PluginBase] = {}
 
@@ -77,6 +81,7 @@ class PluginManager:
                     config=self._config,
                     event_bus=self._event_bus,
                     db=self._db,
+                    llm=self._llm,
                 )
                 await instance.setup()
                 self._plugins[instance.name] = instance
@@ -144,6 +149,7 @@ class PluginManager:
             config=self._config,
             event_bus=self._event_bus,
             db=self._db,
+            llm=self._llm,
         )
         await instance.setup()
         self._plugins[instance.name] = instance

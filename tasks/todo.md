@@ -66,11 +66,36 @@
 - [ ] /status 添加 admin_only 权限检查
 - [ ] throttle.py _last_call 字典无清理（内存泄漏）
 
-## Phase 3: AI + 定时功能
-- [ ] LLM 统一接口层
-- [ ] AI 总结插件组
-- [ ] 定时任务插件组
-- [ ] Bot AI 命令处理器
+## Phase 3: AI + 定时功能 ✅（2026-04-09）
+联网交叉验证：Opus 4.6 自审 + 联网 API 模式验证（Anthropic/Gemini/Ollama/APScheduler 全部通过）
+
+### LLM 统一接口层 ✅
+- [x] `src/llm/base_provider.py` — 抽象基类（BaseLLMProvider + LLMResponse + ChatMessage）
+- [x] `src/llm/provider_factory.py` — 工厂 + 注册表 + LLMManager 缓存管理
+- [x] `src/llm/prompt_templates.py` — 总结/问答/翻译提示词模板
+- [x] `src/llm/providers/openai_provider.py` — OpenAI（httpx，支持自定义 base_url）
+- [x] `src/llm/providers/claude_provider.py` — Claude（anthropic SDK，system 分离）
+- [x] `src/llm/providers/gemini_provider.py` — Gemini（httpx，systemInstruction）
+- [x] `src/llm/providers/deepseek_provider.py` — DeepSeek（继承 OpenAI，仅覆盖 base_url）
+- [x] `src/llm/providers/ollama_provider.py` — Ollama（httpx，/api/chat）
+
+### AI 总结插件组 ✅
+- [x] `src/plugins/ai_summary/chat_summarizer.py` — 群聊消息总结
+- [x] `src/plugins/ai_summary/content_summarizer.py` — URL/文章内容总结
+
+### 定时任务 ✅
+- [x] `src/database/models/scheduled_job.py` — ScheduledJob ORM 模型
+- [x] `src/database/repositories/schedule_repo.py` — 定时任务 Repository
+- [x] `src/plugins/scheduler/cron_sender.py` — Cron 定时发送（APScheduler 3.x）
+
+### Bot AI 命令处理器 ✅
+- [x] `src/bot_interface/handlers/summary_handler.py` — /summarize /ask /url /schedule
+- [x] `src/main.py` 集成 LLMManager + SummaryHandler
+- [x] `src/plugins/plugin_base.py` 添加 llm 可选参数
+- [x] `src/plugins/plugin_manager.py` 传递 llm 给插件
+
+### 修复项
+- [x] APScheduler 版本固定 `>=3.10,<4.0`（4.x 有破坏性 API 变更）
 
 ## Phase 4: 完善与高级功能
 - [ ] 反垃圾插件组

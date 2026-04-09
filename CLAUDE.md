@@ -33,7 +33,7 @@ TG Manager
 **注意：不要引入上表之外的依赖。需要新库时先问我。**
 
 ### 当前阶段
-Phase 2 已完成（核心功能），准备 Phase 3（AI + 定时功能）。详见 `tasks/todo.md`。
+Phase 3 已完成（AI + 定时功能），准备 Phase 4（完善与高级功能）。详见 `tasks/todo.md`。
 
 ---
 

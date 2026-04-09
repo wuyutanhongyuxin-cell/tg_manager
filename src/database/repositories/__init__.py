@@ -9,6 +9,7 @@ from .chat_repo import ChatRepository
 from .forward_rule_repo import ForwardRuleRepository
 from .message_repo import MessageRepository
 from .rule_repo import RuleRepository
+from .schedule_repo import ScheduleRepository
 from .user_repo import UserRepository
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "ForwardRuleRepository",
     "MessageRepository",
     "RuleRepository",
+    "ScheduleRepository",
     "UserRepository",
 ]

@@ -8,6 +8,7 @@ from .chat import Chat
 from .forward_rule import ForwardRule
 from .message import TelegramMessage
 from .rule import AutoReplyRule
+from .scheduled_job import ScheduledJob
 from .user import User
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "ForwardRule",
     "TelegramMessage",
     "AutoReplyRule",
+    "ScheduledJob",
     "User",
 ]

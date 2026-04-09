@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from src.core.config import Config
     from src.core.event_bus import EventBus
     from src.database.engine import DatabaseManager
+    from src.llm.provider_factory import LLMManager
 
 
 class PluginBase(ABC):
@@ -30,6 +31,7 @@ class PluginBase(ABC):
         config: "Config",
         event_bus: "EventBus",
         db: "DatabaseManager",
+        llm: "LLMManager | None" = None,
     ) -> None:
         """初始化插件基类
 
@@ -38,11 +40,13 @@ class PluginBase(ABC):
             config: 全局配置对象
             event_bus: 事件总线，用于插件间通信
             db: 数据库管理器，用于数据持久化
+            llm: LLM 管理器，AI 插件使用（可选）
         """
         self.client = client
         self.config = config
         self.event_bus = event_bus
         self.db = db
+        self.llm = llm
         self._handlers: list[Callable[..., Any]] = []
         self.logger = logging.getLogger(f"plugin.{self.name}")
 

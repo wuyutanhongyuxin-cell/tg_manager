@@ -49,3 +49,15 @@
 - **原因**：两套独立实现，clients 不知道 RateLimiter 的全局暂停逻辑
 - **修复**：clients 的 `_handle_flood_wait` 委托 `self._rate_limiter.handle_flood_wait()`
 - **规则**：所有 Telegram 限流处理必须经过 RateLimiter，不允许独立 sleep
+
+### [2026-04-09] APScheduler 版本必须固定上限 <4.0
+- **现象**：`apscheduler>=3.10` 不限上限，pip 可能安装 4.x 导致全面崩溃
+- **原因**：APScheduler 4.x 移除了 `AsyncIOScheduler`，替换为完全不同的 `AsyncScheduler`，`CronTrigger` 也迁移了位置
+- **修复**：固定为 `apscheduler>=3.10,<4.0`
+- **规则**：有重大版本破坏性变更的依赖，requirements.txt 必须固定大版本上限
+
+### [2026-04-09] LLM Provider 的 system 消息处理差异
+- **现象**：Claude API 要求 `system` 作为顶层参数，不能放在 messages 数组里；Gemini 使用 `systemInstruction` 字段
+- **原因**：各 LLM API 设计不统一
+- **修复**：ChatMessage 统一用 `role="system"`，各 Provider 内部分离（Claude 的 `_split_system()`、Gemini 的 `systemInstruction`）
+- **规则**：Provider 抽象层提供统一接口，API 差异由各 Provider 实现内部消化
