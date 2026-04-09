@@ -68,26 +68,32 @@ class MessageRepository(BaseRepository[TelegramMessage]):
     async def upsert(self, **kwargs) -> TelegramMessage:
         """插入或更新消息（基于 chat_id + message_id 去重）
 
-        使用数据库级别的 INSERT ... ON CONFLICT 保证原子性，
-        避免 SELECT-then-INSERT 的竞态条件。
+        使用数据库级别的 INSERT ... ON CONFLICT 保证原子性。
+        自动检测方言（SQLite / PostgreSQL），避免竞态条件。
         """
-        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-        update_fields = {k: kwargs[k] for k in ("text", "views", "is_pinned", "raw_data") if k in kwargs}
-        stmt = sqlite_insert(TelegramMessage).values(**kwargs)
-        if update_fields:
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["chat_id", "message_id"],
-                set_=update_fields,
-            )
-        else:
-            stmt = stmt.on_conflict_do_nothing(
-                index_elements=["chat_id", "message_id"],
-            )
+        update_fields = {
+            k: kwargs[k] for k in ("text", "views", "is_pinned", "raw_data") if k in kwargs
+        }
+        dialect = self._session.bind.dialect.name if self._session.bind else "sqlite"
+        stmt = self._build_upsert(dialect, kwargs, update_fields)
         await self._session.execute(stmt)
         await self._session.flush()
-        # 返回最终记录
         return await self.get_by_chat_and_msg_id(kwargs["chat_id"], kwargs["message_id"])
+
+    @staticmethod
+    def _build_upsert(dialect: str, values: dict, update_fields: dict):
+        """根据方言构建原子 upsert 语句"""
+        if dialect == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+            stmt = pg_insert(TelegramMessage).values(**values)
+        else:
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+            stmt = sqlite_insert(TelegramMessage).values(**values)
+        if update_fields:
+            return stmt.on_conflict_do_update(
+                index_elements=["chat_id", "message_id"], set_=update_fields,
+            )
+        return stmt.on_conflict_do_nothing(index_elements=["chat_id", "message_id"])
 
     async def get_forwarded(
         self, chat_id: int, limit: int = 50

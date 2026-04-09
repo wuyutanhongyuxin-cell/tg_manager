@@ -76,15 +76,9 @@ class SenderPlugin(PluginBase):
             async with session:
                 async with session.begin():
                     repo = MessageRepository(session)
-                    # 尝试从消息对象获取真实的 peer ID
-                    resolved_chat_id = getattr(msg.peer_id, "channel_id", None) or \
-                                       getattr(msg.peer_id, "chat_id", None) or \
-                                       getattr(msg.peer_id, "user_id", None)
-                    if resolved_chat_id is None and isinstance(chat_id, int):
-                        resolved_chat_id = chat_id
-                    if resolved_chat_id is None:
-                        self.logger.debug("无法解析 chat_id，跳过数据库保存")
-                        return
+                    # 从 peer_id 解析标准 Telegram chat_id
+                    # PeerChannel(id=X) → -100X, PeerChat(id=X) → -X, PeerUser(id=X) → X
+                    resolved_chat_id = self._resolve_chat_id(msg, chat_id)
                     await repo.upsert(
                         message_id=msg.id,
                         chat_id=resolved_chat_id,
@@ -95,3 +89,23 @@ class SenderPlugin(PluginBase):
                     )
         except Exception as e:
             self.logger.warning("保存发送记录失败: %s", e)
+
+    @staticmethod
+    def _resolve_chat_id(msg: Message, fallback: Any) -> int:
+        """从 Telethon Message 的 peer_id 解析标准 Telegram chat_id
+
+        Telethon peer_id 类型映射：
+        - PeerUser(user_id=X) → X（正数）
+        - PeerChat(chat_id=X) → -X（负数，普通群组）
+        - PeerChannel(channel_id=X) → -100X（负数，超级群组/频道）
+        """
+        from telethon.tl.types import PeerChannel, PeerChat, PeerUser
+        peer = getattr(msg, "peer_id", None)
+        if isinstance(peer, PeerChannel):
+            return -1000000000000 - peer.channel_id
+        if isinstance(peer, PeerChat):
+            return -peer.chat_id
+        if isinstance(peer, PeerUser):
+            return peer.user_id
+        # 兜底：使用传入的 chat_id
+        return int(fallback) if isinstance(fallback, (int, str)) else 0

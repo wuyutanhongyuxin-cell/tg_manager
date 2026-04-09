@@ -88,9 +88,12 @@ class EventBus:
                     )
 
     async def emit(self, event_name: str, **kwargs: Any) -> None:
-        """触发事件，异步调用所有已注册的处理器。
+        """触发事件，同步 await 所有已注册处理器（非 fire-and-forget）。
 
-        每个处理器的异常会被捕获并记录，不会影响其他处理器的执行。
+        注意：此方法会等待所有处理器执行完成（通过 asyncio.gather），
+        但 _safe_call 会吞掉处理器异常（仅记录日志），因此调用方
+        无法得知处理器是否执行成功。这是有意设计：保证事件处理不会
+        因单个处理器失败而中断其他处理器或调用方的流程。
 
         Args:
             event_name: 事件名称。
