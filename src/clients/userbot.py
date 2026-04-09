@@ -146,10 +146,11 @@ class UserbotClient:
         return self._client
 
     async def _handle_flood_wait(self, e: TelethonFloodWaitError) -> None:
-        """处理 Telegram 限流，短时间等待后重试，过长则抛出异常。"""
+        """处理 Telegram 限流，委托给 RateLimiter 统一管理连续触发暂停机制。"""
         wait_seconds: int = e.seconds
-        logger.warning("触发 Telegram 限流，需等待 %d 秒", wait_seconds)
+        logger.warning("Userbot 触发限流，委托 RateLimiter 处理 %d 秒", wait_seconds)
         await self._event_bus.emit("flood_wait", seconds=wait_seconds, client="userbot")
         if wait_seconds > 60:
             raise FloodWaitError(wait_seconds, f"限流等待时间过长: {wait_seconds}秒")
-        await asyncio.sleep(wait_seconds)
+        # 委托 RateLimiter 处理（更新连续计数器 + 全局暂停逻辑）
+        await self._rate_limiter.handle_flood_wait(wait_seconds)

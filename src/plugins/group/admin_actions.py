@@ -10,7 +10,6 @@ from typing import Any, Optional
 from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.types import ChatBannedRights
 
-from src.database.models.user import User
 from src.plugins.plugin_base import PluginBase
 
 
@@ -39,8 +38,14 @@ class AdminActionsPlugin(PluginBase):
 
     async def teardown(self) -> None:
         """取消所有事件订阅"""
-        for event_name in ("ban_user", "mute_user", "warn_user", "kick_user"):
-            handler = getattr(self, f"_handle_{event_name.split('_')[0]}")
+        # 显式映射，避免脆弱的字符串拼接
+        event_handler_map = {
+            "ban_user": self._handle_ban,
+            "mute_user": self._handle_mute,
+            "warn_user": self._handle_warn,
+            "kick_user": self._handle_kick,
+        }
+        for event_name, handler in event_handler_map.items():
             await self.event_bus.unsubscribe(event_name, handler)
 
     async def _handle_ban(self, **kwargs: Any) -> None:
@@ -139,39 +144,21 @@ class AdminActionsPlugin(PluginBase):
             self.logger.error("踢出用户 %d 失败: %s", user_id, e)
 
     async def _increment_warn(self, user_id: int) -> int:
-        """增加用户警告计数并返回当前计数"""
-        from sqlalchemy import select
+        """增加用户警告计数并返回当前计数（通过 UserRepository）"""
+        from src.database.repositories.user_repo import UserRepository
         session = self.db.get_session()
         async with session:
             async with session.begin():
-                result = await session.execute(
-                    select(User).where(User.user_id == user_id)
-                )
-                user = result.scalar_one_or_none()
-                if user:
-                    user.warn_count += 1
-                    return user.warn_count
-                # 用户不存在则创建
-                new_user = User(user_id=user_id, warn_count=1)
-                session.add(new_user)
-                return 1
+                repo = UserRepository(session)
+                return await repo.increment_warn(user_id)
 
     async def _update_user_status(
         self, user_id: int, is_banned: bool = False, ban_reason: str = ""
     ) -> None:
-        """更新用户封禁状态"""
-        from sqlalchemy import select
+        """更新用户封禁状态（通过 UserRepository）"""
+        from src.database.repositories.user_repo import UserRepository
         session = self.db.get_session()
         async with session:
             async with session.begin():
-                result = await session.execute(
-                    select(User).where(User.user_id == user_id)
-                )
-                user = result.scalar_one_or_none()
-                if user:
-                    user.is_banned = is_banned
-                    user.ban_reason = ban_reason
-                else:
-                    session.add(User(
-                        user_id=user_id, is_banned=is_banned, ban_reason=ban_reason
-                    ))
+                repo = UserRepository(session)
+                await repo.update_ban_status(user_id, is_banned, ban_reason)

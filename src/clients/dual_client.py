@@ -71,9 +71,13 @@ class DualClient:
     async def stop(self) -> None:
         """停止双客户端。
 
-        依次断开 Bot 和 Userbot 的连接。
+        先发送停止事件（让订阅者有机会在客户端断连前执行清理），
+        再依次断开 Bot 和 Userbot 的连接。
         """
         logger.info("正在停止双客户端...")
+
+        # 先通知订阅者，此时客户端仍然可用
+        await self._event_bus.emit("dual_client_stopping")
 
         try:
             await self.bot.stop()
@@ -86,7 +90,6 @@ class DualClient:
             logger.warning("停止 Userbot 客户端时出错: %s", e)
 
         logger.info("双客户端已停止")
-        await self._event_bus.emit("dual_client_stopped")
 
     async def send_message(
         self,

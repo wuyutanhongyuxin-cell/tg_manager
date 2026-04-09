@@ -1,8 +1,4 @@
-"""
-TG Manager 速率限制器模块。
-
-实现防封禁策略，包括全局/单聊天限速、每日配额、随机抖动和 FloodWait 处理。
-"""
+"""速率限制器 — 多维限速 + FloodWait 处理 + 防封禁策略。"""
 
 from __future__ import annotations
 
@@ -111,54 +107,62 @@ class RateLimiter:
             await asyncio.sleep(self._add_jitter())
             return
 
+        # 在锁内计算需要等待的时间，锁外执行 sleep（避免全局序列化）
+        delay = 0.0
         async with self._lock:
             self._reset_daily_if_needed()
 
             # 检查全局暂停
             now = time.monotonic()
             if now < self._pause_until:
-                wait = self._pause_until - now
-                logger.warning("全局暂停中，等待 %.1f 秒", wait)
-                await asyncio.sleep(wait)
+                delay = self._pause_until - now
+                logger.warning("全局暂停中，等待 %.1f 秒", delay)
 
-            if operation == "message":
-                await self._acquire_message(chat_id)
-            elif operation == "join_group":
+            if operation == "join_group":
                 if self._daily_join_count >= self._join_per_day:
                     raise RateLimitError(f"每日加入群组已达上限: {self._join_per_day}")
                 self._daily_join_count += 1
-                await asyncio.sleep(self._add_jitter())
+                delay += self._add_jitter()
             elif operation == "add_member":
                 if self._daily_add_count >= self._add_member_per_day:
                     raise RateLimitError(f"每日添加成员已达上限: {self._add_member_per_day}")
                 self._daily_add_count += 1
-                await asyncio.sleep(max(self._add_member_interval, self._add_jitter()))
+                delay += max(self._add_member_interval, self._add_jitter())
+            elif operation == "message":
+                delay += self._calc_message_delay(chat_id)
             else:
-                await asyncio.sleep(self._add_jitter())
+                delay += self._add_jitter()
 
-    async def _acquire_message(self, chat_id: int | None) -> None:
-        """处理消息类型的限速逻辑。
+        # 锁外执行实际等待
+        if delay > 0:
+            await asyncio.sleep(delay)
 
-        Args:
-            chat_id: 聊天 ID。
-        """
+        # 锁内更新时间戳（仅消息操作需要）
+        if operation == "message":
+            async with self._lock:
+                now = time.time()
+                if chat_id is not None:
+                    self._chat_last_send[chat_id] = now
+                self._global_timestamps.append(now)
+
+    def _calc_message_delay(self, chat_id: int | None) -> float:
+        """在锁内计算消息操作需要的等待时间（不执行 sleep）。"""
         now = time.time()
+        delay = 0.0
         # 清理超过一分钟的时间戳
         self._global_timestamps = [ts for ts in self._global_timestamps if now - ts < 60]
         # 全局每分钟限速
         if len(self._global_timestamps) >= self._global_per_minute:
-            wait = 60 - (now - self._global_timestamps[0]) + self._add_jitter()
-            logger.info("全局消息限速，等待 %.1f 秒", wait)
-            await asyncio.sleep(wait)
+            delay = 60 - (now - self._global_timestamps[0]) + self._add_jitter()
+            logger.info("全局消息限速，等待 %.1f 秒", delay)
         # 单聊天间隔限速
         if chat_id is not None:
             elapsed = now - self._chat_last_send[chat_id]
             if elapsed < self._per_chat_interval:
-                wait = self._per_chat_interval - elapsed + self._add_jitter()
-                logger.debug("聊天 %d 限速，等待 %.1f 秒", chat_id, wait)
-                await asyncio.sleep(wait)
-            self._chat_last_send[chat_id] = time.time()
-        self._global_timestamps.append(time.time())
+                chat_delay = self._per_chat_interval - elapsed + self._add_jitter()
+                logger.debug("聊天 %d 限速，等待 %.1f 秒", chat_id, chat_delay)
+                delay = max(delay, chat_delay)
+        return delay
 
     async def handle_flood_wait(self, seconds: int) -> None:
         """处理 Telegram FloodWait，按乘数放大等待时间。

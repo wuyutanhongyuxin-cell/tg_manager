@@ -85,6 +85,9 @@ class TemplateReplyPlugin(PluginBase):
             if getattr(sender, "last_name", None):
                 user_name += f" {sender.last_name}"
 
+        # 转义用户消息中的 { } 防止模板注入（用户发 "{user_id}" 不会被替换）
+        safe_message = (event.raw_text or "").replace("{", "{{").replace("}", "}}")
+
         variables = {
             "user_name": user_name or "用户",
             "user_id": str(getattr(sender, "id", "")),
@@ -93,11 +96,11 @@ class TemplateReplyPlugin(PluginBase):
             "chat_id": str(event.chat_id),
             "date": now.strftime("%Y-%m-%d"),
             "time": now.strftime("%H:%M"),
-            "message": event.raw_text or "",
+            "message": safe_message,
         }
 
         try:
             return template.format(**variables)
-        except KeyError as e:
-            self.logger.warning("模板变量未定义: %s", e)
+        except (KeyError, ValueError) as e:
+            self.logger.warning("模板渲染失败: %s", e)
             return template

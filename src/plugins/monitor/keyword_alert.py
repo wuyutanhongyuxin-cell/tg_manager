@@ -30,12 +30,12 @@ class KeywordAlertPlugin(PluginBase):
         self._regex_patterns: list[str] = cfg.get("regex_patterns", [])
         self._monitored_chats: list[int] = cfg.get("monitored_chats", [])
 
+        # 预初始化属性，防止提前 return 后属性缺失
+        self._compiled_regex: list = []
+
         if not self._keywords and not self._regex_patterns:
             self.logger.warning("未配置关键词或正则，插件将不会触发告警")
             return
-
-        # 编译正则表达式
-        self._compiled_regex = []
         for pattern in self._regex_patterns:
             try:
                 self._compiled_regex.append(re.compile(pattern, re.IGNORECASE))

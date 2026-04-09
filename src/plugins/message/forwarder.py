@@ -26,9 +26,12 @@ class ForwarderPlugin(PluginBase):
         return "基于规则的消息自动转发（支持转发/复制/去标签）"
 
     async def setup(self) -> None:
-        """注册 Userbot 新消息事件处理器"""
+        """注册 Userbot 新消息事件处理器（仅非频道消息）
+
+        频道消息由 channel.mirror 插件处理，避免双重转发。
+        """
         self.client.userbot.client.add_event_handler(
-            self._on_new_message, events.NewMessage()
+            self._on_new_message, events.NewMessage(func=lambda e: not e.is_channel)
         )
         self._register_handler(self._on_new_message)
         self.logger.info("消息转发插件已启动")
