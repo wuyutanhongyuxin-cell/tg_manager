@@ -88,6 +88,9 @@ class ChatSummarizerPlugin(PluginBase):
             messages = await repo.get_by_chat(chat_id, limit=limit)
 
         if not messages:
+            messages = await self.client.userbot.get_messages(chat_id, limit=limit)
+
+        if not messages:
             return ""
 
         # 按时间正序排列，格式化为 "发送者: 内容"

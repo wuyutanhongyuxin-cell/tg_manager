@@ -1,10 +1,21 @@
-"""Bot 接口层
+"""Bot interface package exports."""
 
-提供命令路由、回调路由和菜单构建等核心组件。
-"""
-
-from .command_router import CommandRouter
-from .callback_router import CallbackRouter
-from .menu_builder import MenuBuilder
+from __future__ import annotations
 
 __all__ = ["CommandRouter", "CallbackRouter", "MenuBuilder"]
+
+
+def __getattr__(name: str):
+    if name == "CommandRouter":
+        from .command_router import CommandRouter
+
+        return CommandRouter
+    if name == "CallbackRouter":
+        from .callback_router import CallbackRouter
+
+        return CallbackRouter
+    if name == "MenuBuilder":
+        from .menu_builder import MenuBuilder
+
+        return MenuBuilder
+    raise AttributeError(name)

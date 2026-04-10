@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 
@@ -92,14 +93,43 @@ class ContentSummarizerPlugin(PluginBase):
 
         try:
             async with httpx.AsyncClient(timeout=FETCH_TIMEOUT) as client:
-                resp = await client.get(url, follow_redirects=True)
-                resp.raise_for_status()
-                html = resp.text
+                html = await self._fetch_with_safe_redirects(client, url, is_safe_url)
         except httpx.RequestError as e:
             self.logger.warning("获取 URL 失败: %s — %s", url, e)
             return ""
 
         return self._extract_text(html)
+
+    async def _fetch_with_safe_redirects(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        is_safe_url,
+        max_redirects: int = 5,
+    ) -> str:
+        """Fetch content while validating every redirect hop."""
+        current_url = url
+
+        for _ in range(max_redirects + 1):
+            response = await client.get(current_url, follow_redirects=False)
+
+            if response.is_redirect:
+                location = response.headers.get("location")
+                if not location:
+                    raise httpx.RequestError("redirect response missing Location header")
+
+                next_url = urljoin(current_url, location)
+                if not is_safe_url(next_url):
+                    self.logger.warning("Redirect target blocked by SSRF guard: %s", next_url)
+                    return ""
+
+                current_url = next_url
+                continue
+
+            response.raise_for_status()
+            return response.text
+
+        raise httpx.RequestError(f"too many redirects while fetching {url}")
 
     @staticmethod
     def _extract_text(html: str) -> str:

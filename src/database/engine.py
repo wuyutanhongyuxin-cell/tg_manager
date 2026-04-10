@@ -4,8 +4,10 @@
 """
 
 import logging
+from pathlib import Path
 from typing import Optional
 
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -52,6 +54,7 @@ class DatabaseManager:
             url: str = self._config.database.url
             pool_size: int = self._config.database.pool_size
             echo: bool = self._config.database.echo
+            self._ensure_sqlite_parent_dir(url)
 
             # SQLite 不支持连接池参数
             engine_kwargs: dict = {"echo": echo}
@@ -72,6 +75,19 @@ class DatabaseManager:
             logger.info("数据库引擎初始化完成: %s", url.split("@")[-1] if "@" in url else url)
         except Exception as e:
             raise DatabaseError(f"数据库初始化失败: {e}") from e
+
+    @staticmethod
+    def _ensure_sqlite_parent_dir(url: str) -> None:
+        """Create the parent directory for file-based SQLite databases."""
+        parsed = make_url(url)
+        if not parsed.drivername.startswith("sqlite"):
+            return
+
+        database = parsed.database or ""
+        if not database or database == ":memory:" or database.startswith("file:"):
+            return
+
+        Path(database).expanduser().parent.mkdir(parents=True, exist_ok=True)
 
     async def close(self) -> None:
         """关闭数据库引擎，释放所有连接

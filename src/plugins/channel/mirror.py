@@ -79,7 +79,7 @@ class MirrorPlugin(PluginBase):
                 await self.client.userbot.forward_message(
                     event.chat_id, msg.id, target_id
                 )
-            else:
+            elif mode == "copy":
                 # copy 和 copy_clean 均为重新发送（无转发标签）
                 kwargs: dict = {}
                 if msg.media:
@@ -88,6 +88,13 @@ class MirrorPlugin(PluginBase):
                     kwargs["formatting_entities"] = msg.entities
                 await self.client.userbot.send_message(
                     target_id, msg.message or "", **kwargs
+                )
+            else:
+                await self.event_bus.emit(
+                    "copy_clean_message",
+                    source_chat_id=event.chat_id,
+                    message_id=msg.id,
+                    target_chat_id=target_id,
                 )
 
             self.logger.debug(

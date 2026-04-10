@@ -1,53 +1,34 @@
-# TG Manager 配置文件
-# 敏感信息请放在 .env 文件中，此处通过 ${ENV_VAR} 引用
+# TG Manager 配置模板
+# 敏感信息请放在 .env 中，并通过 ${ENV_VAR} 引用。
 
-# === Telegram 配置 ===
 telegram:
   api_id: ${TG_API_ID}
   api_hash: ${TG_API_HASH}
   bot_token: ${TG_BOT_TOKEN}
   admin_user_id: ${TG_ADMIN_USER_ID}
-  # session 文件存放目录
   session_dir: "sessions"
-  # Userbot session 名称
   userbot_session: "userbot"
-  # Bot session 名称
   bot_session: "bot"
 
-# === 数据库配置 ===
 database:
   url: ${DATABASE_URL}
-  # 连接池大小（PostgreSQL 生效）
   pool_size: 5
   echo: false
 
-# === 速率限制 ===
 rate_limit:
-  # 全局：每分钟最大消息数
   global_per_minute: 30
-  # 单聊天：最小间隔秒数
   per_chat_interval: 3.0
-  # 加入群组：每天最大数量
   join_per_day: 20
-  # 添加成员：每天最大数量
   add_member_per_day: 50
-  # 添加成员最小间隔秒数
   add_member_interval: 30.0
-  # 文件下载并发数
   download_concurrent: 3
-  # FloodWait 乘数
   flood_wait_multiplier: 1.5
-  # 连续 FloodWait 暂停阈值
   flood_wait_pause_threshold: 3
-  # 暂停时长（秒）
   flood_wait_pause_duration: 300
-  # 随机抖动范围（秒）
   jitter_min: 0.5
   jitter_max: 2.0
 
-# === LLM 配置 ===
 llm:
-  # 默认 provider: openai / claude / gemini / deepseek / ollama
   default_provider: "openai"
   providers:
     openai:
@@ -78,9 +59,7 @@ llm:
       max_tokens: 4096
       temperature: 0.7
 
-# === 插件配置 ===
 plugins:
-  # 启用的插件（支持通配符）
   enabled:
     - "message.*"
     - "channel.*"
@@ -89,58 +68,33 @@ plugins:
     - "scheduler.*"
     - "ai_summary.*"
     - "monitor.*"
-    - "media.*"
-    - "antispam.*"
 
-# === 插件专属配置 ===
 plugin_config:
-  # 自动回复
+  # 分组键可作用于该命名空间下的所有插件。
+  # 更具体的全名键会覆盖分组键，例如 ai_summary.chat_summarizer。
   auto_reply:
-    # 是否启用 AI 回复（需配置 LLM）
     ai_enabled: false
-    # 最大回复长度
     max_reply_length: 500
 
-  # 频道镜像
-  channel_mirror:
-    # 镜像规则列表
+  channel:
     rules: []
-    # 示例:
-    # - source: -1001234567890
-    #   target: -1009876543210
-    #   filter_keywords: []
-    #   remove_forward_tag: true
 
-  # 定时消息
   scheduler:
     timezone: "Asia/Shanghai"
 
-  # AI 总结
   ai_summary:
-    # 默认总结语言
     language: "zh-CN"
-    # 群聊总结：回溯消息数量
     chat_summary_limit: 200
 
-  # 关键词监控
-  keyword_alert:
-    # 监控关键词列表
+  monitor:
     keywords: []
-    # 告警推送目标（chat_id）
     alert_target: ${TG_ADMIN_USER_ID}
 
-  # 反垃圾
-  antispam:
-    # CAPTCHA 超时秒数
-    captcha_timeout: 120
-    # 是否自动踢出超时用户
-    kick_on_timeout: true
+  group:
+    welcome_message: "欢迎 {user} 加入群组"
 
-# === 日志配置 ===
 logging:
   level: "INFO"
-  # 日志格式
   format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-  # 是否输出到文件
   file_enabled: false
   file_path: "logs/tg_manager.log"

@@ -93,7 +93,25 @@ class PluginBase(ABC):
         Returns:
             本插件的配置字典
         """
-        return self.config.plugin_config.get(self.name, {})
+        plugin_config = self.config.plugin_config or {}
+        category, _, short_name = self.name.partition(".")
+        merged: dict[str, Any] = {}
+
+        candidate_keys = [
+            category,
+            short_name,
+            f"{category}_{short_name}" if short_name else "",
+            self.name,
+        ]
+
+        for key in candidate_keys:
+            if not key:
+                continue
+            section = plugin_config.get(key, {})
+            if isinstance(section, dict):
+                merged.update(dict(section))
+
+        return merged
 
     def _register_handler(self, handler: Callable[..., Any]) -> None:
         """记录已注册的处理器，便于 teardown 时统一清理

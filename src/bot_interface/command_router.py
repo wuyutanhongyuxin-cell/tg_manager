@@ -1,69 +1,65 @@
-"""Bot 命令路由分发
+"""Bot command routing helpers."""
 
-负责注册和管理所有 Bot 命令处理器，
-将命令与对应的处理函数绑定到 Telethon 事件系统。
-"""
+from __future__ import annotations
 
 import logging
-from telethon import events
-from typing import Callable, Any
+import re
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
 
 class CommandRouter:
-    """注册和分发 Bot 命令
-
-    维护一个命令注册表，在 setup() 时将所有命令
-    绑定到 BotClient 的事件处理器。
-    """
+    """Register bot commands and bind them to Telethon handlers."""
 
     def __init__(self, bot_client: Any) -> None:
-        """初始化命令路由器
-
-        Args:
-            bot_client: BotClient 实例，提供 client 属性用于事件绑定
-        """
         self._bot = bot_client
-        self._commands: dict[str, dict[str, Any]] = {}  # command -> {handler, description}
+        self._commands: dict[str, dict[str, Any]] = {}
 
     def register(self, command: str, handler: Callable, description: str = "") -> None:
-        """注册命令处理器
-
-        Args:
-            command: 命令名（不含 /）
-            handler: async 处理函数，接收 event 参数
-            description: 命令描述，用于帮助信息
-        """
         self._commands[command] = {
             "handler": handler,
             "description": description,
         }
 
-    def setup(self) -> None:
-        """将所有已注册的命令绑定到 Bot 客户端事件
+    @staticmethod
+    def matches_command(raw_text: str, command: str, bot_username: str = "") -> bool:
+        """Match `/command` and `/command@ThisBot`, but reject other bot targets."""
+        pattern = re.compile(
+            rf"^/{re.escape(command)}(?:@(?P<target>[A-Za-z0-9_]+))?(?:\s|$)"
+        )
+        match = pattern.match(raw_text or "")
+        if not match:
+            return False
 
-        遍历命令注册表，为每个命令创建 Telethon 事件处理器。
-        必须在所有命令注册完成后调用。
-        """
+        target = match.group("target")
+        if not target:
+            return True
+
+        return bool(bot_username) and target.lower() == bot_username.lower()
+
+    def setup(self) -> None:
+        from telethon import events
+
+        bot_username = getattr(self._bot, "username", "")
+
         for cmd, info in self._commands.items():
-            # 严格锚定命令匹配：仅匹配 /cmd 或 /cmd 后跟空格/@ 的情况
-            pattern = rf"^/{cmd}(?:\s|@|$)"
+            pattern = rf"^/{re.escape(cmd)}(?:@[A-Za-z0-9_]+)?(?:\s|$)"
             handler = info["handler"]
 
-            # 绑定到 Telethon 事件系统
             self._bot.client.on(
-                events.NewMessage(pattern=pattern, incoming=True)
+                events.NewMessage(
+                    incoming=True,
+                    pattern=pattern,
+                    func=lambda e, cmd=cmd, bot_username=bot_username: (
+                        self.matches_command(e.raw_text, cmd, bot_username)
+                    ),
+                )
             )(handler)
 
-            logger.info(f"注册命令: /{cmd} - {info['description']}")
+            logger.info("registered command: /%s - %s", cmd, info["description"])
 
     def get_commands(self) -> list[dict[str, str]]:
-        """返回所有已注册命令的列表
-
-        Returns:
-            命令信息列表，每项包含 command 和 description
-        """
         return [
             {"command": f"/{cmd}", "description": info["description"]}
             for cmd, info in self._commands.items()

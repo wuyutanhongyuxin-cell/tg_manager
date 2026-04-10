@@ -123,4 +123,9 @@ class ForwarderPlugin(PluginBase):
     async def _copy_clean(self, event: events.NewMessage.Event, target: int) -> None:
         """去标签复制（移除所有来源标记）"""
         # 与 copy 相同，Telethon send_message 不会带转发标签
-        await self._copy(event, target)
+        await self.event_bus.emit(
+            "copy_clean_message",
+            source_chat_id=event.chat_id,
+            message_id=event.message.id,
+            target_chat_id=target,
+        )

@@ -1,9 +1,40 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tg-manager"
 version = "0.1.0"
-description = "全功能 Telegram 管理工具"
+description = "Telegram management toolkit with bot, userbot, plugins, and AI helpers"
 requires-python = ">=3.11"
 readme = "README.md"
+dependencies = [
+    "telethon>=1.36.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.19",
+    "asyncpg>=0.29",
+    "apscheduler>=3.10,<4.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+    "tiktoken>=0.7",
+    "anthropic>=0.39",
+    "feedparser>=6.0",
+    "beautifulsoup4>=4.12",
+    "readability-lxml>=0.8",
+    "yt-dlp>=2024.0",
+    "Pillow>=10.0",
+    "aiofiles>=23.0",
+    "captcha>=0.5",
+    "jinja2>=3.1",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
 
 [tool.ruff]
 line-length = 100

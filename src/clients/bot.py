@@ -37,6 +37,7 @@ class BotClient:
         self._rate_limiter = rate_limiter
         self._event_bus = event_bus
         self._client: Optional[TelegramClient] = None
+        self._username: str = ""
 
     async def start(self) -> None:
         """启动 Bot 客户端，使用 bot_token 认证。
@@ -56,6 +57,7 @@ class BotClient:
         except Exception as e:
             raise ClientError(f"Bot 客户端启动失败: {e}") from e
         me = await self._client.get_me()
+        self._username = (me.username or "").lower()
         logger.info("Bot 已启动，@%s (ID: %s)", me.username, me.id)
         await self._event_bus.emit("bot_started", bot_id=me.id)
 
@@ -151,6 +153,11 @@ class BotClient:
         if self._client is None:
             raise ClientError("Bot 客户端尚未初始化，请先调用 start()")
         return self._client
+
+    @property
+    def username(self) -> str:
+        """Return the normalized bot username for command routing."""
+        return self._username
 
     async def _handle_flood_wait(self, e: TelethonFloodWaitError) -> None:
         """处理 Telegram 限流，委托给 RateLimiter 统一管理连续触发暂停机制。"""
