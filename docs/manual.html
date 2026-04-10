@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TG Manager — 使用手册</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   DESIGN SYSTEM — Cyber-Terminal × Telegram Blue
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --bg-void: #06080d;
+  --bg-deep: #0a0e17;
+  --bg-panel: #0f1420;
+  --bg-card: #141b2a;
+  --bg-hover: #1a2236;
+  --bg-active: #1e2a42;
+  --border-dim: #1c2538;
+  --border-mid: #2a3654;
+  --border-bright: #3d5280;
+  --tg-blue: #2AABEE;
+  --tg-blue-dim: #1a7ab3;
+  --tg-blue-glow: rgba(42,171,238,0.15);
+  --tg-blue-glow2: rgba(42,171,238,0.08);
+  --accent-green: #3dd68c;
+  --accent-amber: #f0b429;
+  --accent-red: #ef4444;
+  --accent-purple: #a78bfa;
+  --accent-cyan: #22d3ee;
+  --text-primary: #e2e8f0;
+  --text-secondary: #8899b4;
+  --text-dim: #4a5a78;
+  --text-code: #a5d6ff;
+  --font-body: 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scrollbar-color: var(--border-mid) var(--bg-deep); }
+html::-webkit-scrollbar { width: 6px; }
+html::-webkit-scrollbar-track { background: var(--bg-deep); }
+html::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-void);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 280px;
+  height: 100vh;
+  background: var(--bg-deep);
+  border-right: 1px solid var(--border-dim);
+  overflow-y: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+
+.sidebar-header {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--tg-blue);
+  letter-spacing: -0.02em;
+}
+.sidebar-logo .dot {
+  width: 8px; height: 8px;
+  background: var(--accent-green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent-green);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.sidebar-version {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+.sidebar-nav { padding: 12px 0; flex: 1; }
+
+.nav-group {
+  margin-bottom: 4px;
+}
+.nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 12px;
+}
+.nav-group-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-dim);
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 20px 7px 28px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 400;
+  transition: var(--transition);
+  border-left: 2px solid transparent;
+}
+.nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-left-color: var(--border-mid);
+}
+.nav-link.active {
+  color: var(--tg-blue);
+  background: var(--tg-blue-glow2);
+  border-left-color: var(--tg-blue);
+  font-weight: 500;
+}
+.nav-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* ═══ MAIN CONTENT ═══ */
+.main {
+  margin-left: 280px;
+  min-height: 100vh;
+}
+
+/* Hero */
+.hero {
+  position: relative;
+  padding: 80px 60px 60px;
+  background: linear-gradient(135deg, var(--bg-deep) 0%, #0d1525 50%, #0a1628 100%);
+  border-bottom: 1px solid var(--border-dim);
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 30% 20%, rgba(42,171,238,0.06), transparent),
+    radial-gradient(ellipse 400px 300px at 70% 80%, rgba(61,214,140,0.04), transparent);
+  pointer-events: none;
+}
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border-dim) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-dim) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.3;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 70%);
+}
+.hero-content { position: relative; z-index: 1; max-width: 800px; }
+.hero h1 {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--tg-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+.hero-tagline {
+  font-size: 17px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 600px;
+}
+.hero-stats {
+  display: flex;
+  gap: 32px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero-stat-value {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tg-blue);
+}
+.hero-stat-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Content sections */
+.content { padding: 0 60px 80px; max-width: 960px; }
+
+.section {
+  padding-top: 48px;
+  animation: fadeSlideIn 0.4s ease-out;
+}
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-dim);
+}
+.section-icon {
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tg-blue-glow);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 28px 0 12px;
+}
+h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tg-blue);
+  margin: 20px 0 8px;
+  font-family: var(--font-mono);
+}
+p { margin-bottom: 12px; color: var(--text-secondary); }
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  transition: var(--transition);
+}
+.card:hover {
+  border-color: var(--border-mid);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+}
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.card-desc { font-size: 13px; color: var(--text-secondary); margin: 0; }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+/* Tags */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+.tag-blue { background: rgba(42,171,238,0.12); color: var(--tg-blue); border: 1px solid rgba(42,171,238,0.2); }
+.tag-green { background: rgba(61,214,140,0.12); color: var(--accent-green); border: 1px solid rgba(61,214,140,0.2); }
+.tag-amber { background: rgba(240,180,41,0.12); color: var(--accent-amber); border: 1px solid rgba(240,180,41,0.2); }
+.tag-red { background: rgba(239,68,68,0.12); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.2); }
+.tag-purple { background: rgba(167,139,250,0.12); color: var(--accent-purple); border: 1px solid rgba(167,139,250,0.2); }
+
+/* Code blocks */
+pre {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  overflow-x: auto;
+  margin: 12px 0 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-code);
+}
+code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--bg-panel);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent-cyan);
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-dim);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.code-header + pre {
+  border-radius: 0 0 var(--radius) var(--radius);
+  margin-top: 0;
+}
+.code-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.code-dot.r { background: #ef4444; }
+.code-dot.y { background: #f0b429; }
+.code-dot.g { background: #3dd68c; }
+
+/* Tables */
+.table-wrap {
+  overflow-x: auto;
+  margin: 12px 0 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-dim);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th {
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-dim);
+}
+td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg-hover); }
+td code { font-size: 12px; }
+
+/* Callout boxes */
+.callout {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  margin: 16px 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.callout-info {
+  background: var(--tg-blue-glow2);
+  border: 1px solid rgba(42,171,238,0.15);
+  color: var(--text-secondary);
+}
+.callout-warn {
+  background: rgba(240,180,41,0.06);
+  border: 1px solid rgba(240,180,41,0.15);
+  color: var(--text-secondary);
+}
+.callout-danger {
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.15);
+  color: var(--text-secondary);
+}
+
+/* Architecture diagram */
+.arch-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 24px 0;
+  overflow-x: auto;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.arch-node {
+  padding: 12px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-mid);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  min-width: 120px;
+  transition: var(--transition);
+}
+.arch-node:hover {
+  border-color: var(--tg-blue);
+  box-shadow: 0 0 20px var(--tg-blue-glow);
+}
+.arch-node.primary { border-color: var(--tg-blue); background: var(--tg-blue-glow2); }
+.arch-arrow {
+  color: var(--text-dim);
+  font-size: 20px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+/* Command reference */
+.cmd-item {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-dim);
+  align-items: flex-start;
+}
+.cmd-item:last-child { border-bottom: none; }
+.cmd-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  min-width: 220px;
+  flex-shrink: 0;
+}
+.cmd-desc { font-size: 13px; color: var(--text-secondary); }
+.cmd-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  margin-left: 8px;
+}
+.cmd-badge.admin { background: rgba(240,180,41,0.15); color: var(--accent-amber); }
+.cmd-badge.public { background: rgba(61,214,140,0.15); color: var(--accent-green); }
+
+/* Event bus diagram */
+.event-flow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px 16px;
+  align-items: center;
+  margin: 16px 0;
+}
+.event-publisher, .event-subscriber {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.event-publisher { background: rgba(42,171,238,0.1); border: 1px solid rgba(42,171,238,0.2); text-align: right; }
+.event-subscriber { background: rgba(61,214,140,0.1); border: 1px solid rgba(61,214,140,0.2); }
+.event-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-amber);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Footer */
+.footer {
+  padding: 40px 60px;
+  border-top: 1px solid var(--border-dim);
+  color: var(--text-dim);
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .hero { padding: 40px 24px; }
+  .hero h1 { font-size: 28px; }
+  .content { padding: 0 24px 60px; }
+  .card-grid { grid-template-columns: 1fr; }
+  .hero-stats { gap: 20px; }
+  .cmd-item { flex-direction: column; gap: 4px; }
+  .cmd-name { min-width: auto; }
+}
+
+/* Smooth section observer highlight */
+.section[data-observed] { scroll-margin-top: 24px; }
+
+/* Accordion for config/db */
+details {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  transition: var(--transition);
+}
+details[open] { border-color: var(--border-mid); }
+details summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+details summary::before {
+  content: '▸';
+  font-size: 12px;
+  color: var(--text-dim);
+  transition: transform 0.2s;
+}
+details[open] summary::before { transform: rotate(90deg); }
+details summary::-webkit-details-marker { display: none; }
+details .detail-content { padding: 0 16px 16px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"><span class="dot"></span> TG Manager</div>
+    <div class="sidebar-version">v0.1.0 · User Manual</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-title">快速开始</div>
+      <a class="nav-link" href="#overview"><span class="nav-icon">◈</span> 项目概览</a>
+      <a class="nav-link" href="#install"><span class="nav-icon">⬡</span> 安装部署</a>
+      <a class="nav-link" href="#config"><span class="nav-icon">⚙</span> 配置说明</a>
+      <a class="nav-link" href="#quickstart"><span class="nav-icon">▶</span> 首次启动</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">架构</div>
+      <a class="nav-link" href="#architecture"><span class="nav-icon">◫</span> 系统架构</a>
+      <a class="nav-link" href="#dual-client"><span class="nav-icon">⇄</span> 双客户端</a>
+      <a class="nav-link" href="#plugin-system"><span class="nav-icon">⧉</span> 插件系统</a>
+      <a class="nav-link" href="#event-bus"><span class="nav-icon">⇶</span> 事件总线</a>
+      <a class="nav-link" href="#rate-limiter"><span class="nav-icon">⏱</span> 速率限制</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">功能模块</div>
+      <a class="nav-link" href="#message"><span class="nav-icon">✉</span> 消息管理</a>
+      <a class="nav-link" href="#channel"><span class="nav-icon">📢</span> 频道管理</a>
+      <a class="nav-link" href="#group"><span class="nav-icon">👥</span> 群组管理</a>
+      <a class="nav-link" href="#auto-reply"><span class="nav-icon">🤖</span> 自动回复</a>
+      <a class="nav-link" href="#scheduler"><span class="nav-icon">⏰</span> 定时任务</a>
+      <a class="nav-link" href="#ai-summary"><span class="nav-icon">🧠</span> AI 总结</a>
+      <a class="nav-link" href="#monitor"><span class="nav-icon">🚨</span> 监控告警</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">参考</div>
+      <a class="nav-link" href="#commands"><span class="nav-icon">⌘</span> 命令大全</a>
+      <a class="nav-link" href="#llm"><span class="nav-icon">◎</span> LLM 多模型</a>
+      <a class="nav-link" href="#database"><span class="nav-icon">▦</span> 数据库模型</a>
+      <a class="nav-link" href="#security"><span class="nav-icon">🔒</span> 安全机制</a>
+      <a class="nav-link" href="#faq"><span class="nav-icon">?</span> 常见问题</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main class="main">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <h1>TG Manager<br>使用手册</h1>
+    <p class="hero-tagline">
+      全功能 Telegram 管理工具 — 集消息转发、频道镜像、群组管理、自动回复、AI 总结、定时发送、关键词监控于一体。
+      基于 Telethon 双客户端架构，插件化设计，多 LLM 模型支持。
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-stat-value">85</span><span class="hero-stat-label">Python 源文件</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">6,800+</span><span class="hero-stat-label">代码行数</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">12</span><span class="hero-stat-label">功能插件</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">5</span><span class="hero-stat-label">LLM 模型</span></div>
+      <div class="hero-stat"><span class="hero-stat-value">31</span><span class="hero-stat-label">事件类型</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ═══════════ 1. 项目概览 ═══════════ -->
+<section class="section" id="overview">
+  <div class="section-header">
+    <div class="section-icon">◈</div>
+    <h2>项目概览</h2>
+  </div>
+  <p>TG Manager 是面向个人用户和小团队运营者的 Telegram 管理脚本。它由两个 Telethon 客户端驱动：<strong>Userbot</strong>（个人账号 MTProto）负责高权限操作，<strong>Bot</strong>（Bot Token）负责用户交互。所有功能以<strong>插件</strong>形式存在，通过事件总线解耦通信。</p>
+
+  <h3>技术栈</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>组件</th><th>选型</th><th>版本要求</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td>语言</td><td><code>Python</code></td><td>3.11+</td><td>主开发语言</td></tr>
+        <tr><td>Telegram 客户端</td><td><code>Telethon</code></td><td>≥ 1.36.0</td><td>Userbot + Bot 统一 API</td></tr>
+        <tr><td>ORM</td><td><code>SQLAlchemy async</code></td><td>≥ 2.0</td><td>数据库 ORM + 异步会话</td></tr>
+        <tr><td>开发数据库</td><td><code>SQLite + aiosqlite</code></td><td>≥ 0.19</td><td>零配置本地数据库</td></tr>
+        <tr><td>生产数据库</td><td><code>PostgreSQL + asyncpg</code></td><td>≥ 0.29</td><td>生产环境数据库</td></tr>
+        <tr><td>定时调度</td><td><code>APScheduler</code></td><td>≥ 3.10, &lt; 4.0</td><td>Cron 定时任务</td></tr>
+        <tr><td>HTTP</td><td><code>httpx</code></td><td>≥ 0.27</td><td>LLM API 调用 / URL 抓取</td></tr>
+        <tr><td>配置</td><td><code>PyYAML + python-dotenv</code></td><td>—</td><td>YAML 结构配置 + 环境变量</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>已接通功能</h3>
+  <div class="card-grid">
+    <div class="card"><div class="card-title">✉ 消息管理</div><p class="card-desc">消息发送、自动转发（关键词/正则过滤）、去标签复制、消息入库记录</p></div>
+    <div class="card"><div class="card-title">📢 频道管理</div><p class="card-desc">频道镜像同步（forward/copy/copy_clean 三种模式）</p></div>
+    <div class="card"><div class="card-title">👥 群组管理</div><p class="card-desc">ban / mute / warn / kick + 欢迎消息（模板变量替换）</p></div>
+    <div class="card"><div class="card-title">🤖 自动回复</div><p class="card-desc">关键词/正则/精确匹配规则引擎 + 模板回复</p></div>
+    <div class="card"><div class="card-title">⏰ 定时任务</div><p class="card-desc">Cron 表达式定时消息发送（APScheduler + DB 持久化）</p></div>
+    <div class="card"><div class="card-title">🧠 AI 总结</div><p class="card-desc">群聊消息总结 / URL 内容提取总结 / AI 问答</p></div>
+    <div class="card"><div class="card-title">🚨 监控告警</div><p class="card-desc">关键词 + 正则监控，命中后通知管理员</p></div>
+    <div class="card"><div class="card-title">⚙ 插件管理</div><p class="card-desc">插件列表 / 热重载 / 配置摘要 / 菜单交互</p></div>
+  </div>
+</section>
+
+<!-- ═══════════ 2. 安装部署 ═══════════ -->
+<section class="section" id="install">
+  <div class="section-header">
+    <div class="section-icon">⬡</div>
+    <h2>安装部署</h2>
+  </div>
+
+  <h3>环境要求</h3>
+  <ul style="color:var(--text-secondary);padding-left:20px;margin-bottom:16px;">
+    <li>Python 3.11 或更高版本</li>
+    <li>Telegram <code>api_id</code> 和 <code>api_hash</code>（从 <a href="https://my.telegram.org" style="color:var(--tg-blue)">my.telegram.org</a> 获取）</li>
+    <li>一个 Bot Token（从 <code>@BotFather</code> 创建）</li>
+    <li>一个可登录的 Telegram 用户账号（用于 Userbot）</li>
+  </ul>
+
+  <h3>安装步骤</h3>
+  <div class="code-header"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span> terminal</div>
+  <pre><code><span style="color:var(--accent-green)"># 1. 克隆仓库</span>
+git clone https://github.com/wuyutanhongyuxin-cell/tg_manager.git
+cd tg_manager
+
+<span style="color:var(--accent-green)"># 2. 安装依赖（推荐 editable 模式）</span>
+python -m pip install -e .
+
+<span style="color:var(--accent-green)"># 或仅安装运行依赖</span>
+python -m pip install -r requirements.txt
+
+<span style="color:var(--accent-green)"># 3. 如果 pip install -e . 失败（PEP 660），先升级工具链</span>
+python -m pip install -U pip setuptools wheel</code></pre>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div>项目使用 <code>pyproject.toml</code> 管理依赖和构建配置，支持 <code>pip install -e .</code> 开发模式安装。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 3. 配置说明 ═══════════ -->
+<section class="section" id="config">
+  <div class="section-header">
+    <div class="section-icon">⚙</div>
+    <h2>配置说明</h2>
+  </div>
+  <p>配置分为两层：<strong>.env</strong> 存放敏感凭据，<strong>config.yaml</strong> 存放结构化配置。YAML 中通过 <code>${ENV_VAR}</code> 引用环境变量。</p>
+
+  <h3>第一步：配置环境变量</h3>
+  <div class="code-header"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span> .env</div>
+  <pre><code>TG_API_ID=12345678
+TG_API_HASH=abcdef1234567890abcdef1234567890
+TG_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
+TG_ADMIN_USER_ID=987654321
+DATABASE_URL=sqlite+aiosqlite:///data/tg_manager.db
+
+<span style="color:var(--text-dim)"># LLM API Keys（按需配置）</span>
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com/v1
+ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AI...
+DEEPSEEK_API_KEY=sk-...
+OLLAMA_BASE_URL=http://localhost:11434</code></pre>
+
+  <h3>第二步：配置 config.yaml</h3>
+  <div class="code-header"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span> config/config.yaml</div>
+  <pre><code><span style="color:var(--accent-amber)">telegram:</span>
+  api_id: ${TG_API_ID}
+  api_hash: ${TG_API_HASH}
+  bot_token: ${TG_BOT_TOKEN}
+  admin_user_id: ${TG_ADMIN_USER_ID}
+  session_dir: "sessions"
+
+<span style="color:var(--accent-amber)">database:</span>
+  url: ${DATABASE_URL}
+  pool_size: 5
+  echo: false
+
+<span style="color:var(--accent-amber)">rate_limit:</span>
+  global_per_minute: 30      <span style="color:var(--text-dim)"># 全局每分钟消息上限</span>
+  per_chat_interval: 3.0     <span style="color:var(--text-dim)"># 单聊天最小间隔（秒）</span>
+  flood_wait_multiplier: 1.5 <span style="color:var(--text-dim)"># FloodWait 等待倍数</span>
+  flood_wait_pause_threshold: 3
+  flood_wait_pause_duration: 300
+
+<span style="color:var(--accent-amber)">plugins:</span>
+  enabled:
+    - "message.*"
+    - "channel.*"
+    - "group.*"
+    - "auto_reply.*"
+    - "scheduler.*"
+    - "ai_summary.*"
+    - "monitor.*"
+
+<span style="color:var(--accent-amber)">plugin_config:</span>
+  <span style="color:var(--text-dim)"># 分组键作用于命名空间下所有插件</span>
+  ai_summary:
+    language: "zh-CN"
+    chat_summary_limit: 200
+  <span style="color:var(--text-dim)"># 全名键覆盖分组键</span>
+  ai_summary.chat_summarizer:
+    chat_summary_limit: 300</code></pre>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div><strong>插件配置合并规则：</strong>先读分组键（如 <code>ai_summary</code>），再读全名键（如 <code>ai_summary.chat_summarizer</code>），全名键覆盖同名字段。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 4. 首次启动 ═══════════ -->
+<section class="section" id="quickstart">
+  <div class="section-header">
+    <div class="section-icon">▶</div>
+    <h2>首次启动</h2>
+  </div>
+
+  <h3>1. 生成 Userbot Session</h3>
+  <div class="code-header"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span> terminal</div>
+  <pre><code>python scripts/setup_session.py</code></pre>
+  <p>按提示输入手机号、验证码和两步验证密码。成功后会在 <code>sessions/</code> 目录生成 <code>userbot.session</code> 文件。</p>
+
+  <div class="callout callout-danger">
+    <span class="callout-icon">⚠</span>
+    <div><strong>永远不要提交 .session 文件到 Git！</strong> 它包含你的登录凭证。<code>.gitignore</code> 已自动排除此类文件。</div>
+  </div>
+
+  <h3>2. 启动应用</h3>
+  <div class="code-header"><span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span> terminal</div>
+  <pre><code>python -m src.main</code></pre>
+
+  <h3>启动流程</h3>
+  <div class="arch-flow">
+    <div class="arch-node">加载 .env</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node">解析 config.yaml</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node">初始化数据库</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node">初始化 LLM</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node primary">启动双客户端</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node">注册命令路由</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node">加载插件</div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node" style="border-color:var(--accent-green)">等待事件</div>
+  </div>
+</section>
+
+<!-- ═══════════ 5. 系统架构 ═══════════ -->
+<section class="section" id="architecture">
+  <div class="section-header">
+    <div class="section-icon">◫</div>
+    <h2>系统架构</h2>
+  </div>
+
+  <div class="arch-flow" style="flex-wrap:wrap;gap:12px;">
+    <div class="arch-node primary" style="min-width:160px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">用户界面</div>
+      Bot 命令 / 菜单
+    </div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node" style="min-width:160px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">路由层</div>
+      CommandRouter<br>CallbackRouter
+    </div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node" style="min-width:160px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">处理器</div>
+      Handler → EventBus
+    </div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node" style="min-width:160px;border-color:var(--accent-green);">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">插件层</div>
+      12 个功能插件
+    </div>
+    <span class="arch-arrow">→</span>
+    <div class="arch-node" style="min-width:160px;">
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">执行层</div>
+      DualClient<br>（Bot / Userbot）
+    </div>
+  </div>
+
+  <h3>项目结构</h3>
+  <pre><code>tg_manager/
+├── src/
+│   ├── main.py                  <span style="color:var(--text-dim)"># 入口：初始化 → 加载 → 运行</span>
+│   ├── core/                    <span style="color:var(--text-dim)"># 配置 / 事件总线 / 速率限制 / 异常</span>
+│   ├── clients/                 <span style="color:var(--text-dim)"># Userbot / Bot / DualClient</span>
+│   ├── database/                <span style="color:var(--text-dim)"># ORM 模型 + Repository</span>
+│   ├── llm/                     <span style="color:var(--text-dim)"># 多模型 LLM 统一接口</span>
+│   ├── plugins/                 <span style="color:var(--text-dim)"># 所有功能插件</span>
+│   │   ├── message/             <span style="color:var(--text-dim)"># 发送 / 转发 / 录入</span>
+│   │   ├── channel/             <span style="color:var(--text-dim)"># 镜像 / 去标签</span>
+│   │   ├── group/               <span style="color:var(--text-dim)"># 管理 / 欢迎</span>
+│   │   ├── auto_reply/          <span style="color:var(--text-dim)"># 规则 / 模板</span>
+│   │   ├── scheduler/           <span style="color:var(--text-dim)"># 定时发送</span>
+│   │   ├── ai_summary/          <span style="color:var(--text-dim)"># 总结 / 问答</span>
+│   │   └── monitor/             <span style="color:var(--text-dim)"># 关键词告警</span>
+│   ├── bot_interface/           <span style="color:var(--text-dim)"># 命令路由 / 回调路由 / 菜单</span>
+│   └── utils/                   <span style="color:var(--text-dim)"># 文本 / 媒体 / 时间 / 验证</span>
+├── config/config.yaml
+├── scripts/setup_session.py
+└── tests/</code></pre>
+</section>
+
+<!-- ═══════════ 6. 双客户端 ═══════════ -->
+<section class="section" id="dual-client">
+  <div class="section-header">
+    <div class="section-icon">⇄</div>
+    <h2>双客户端架构</h2>
+  </div>
+  <p><strong>核心原则：Userbot 负责执行，Bot 负责交互。能用 Bot 做的绝不用 Userbot。</strong></p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>能力</th><th>Userbot (MTProto)</th><th>Bot</th></tr></thead>
+      <tbody>
+        <tr><td>身份</td><td>个人账号</td><td>@YourManagerBot</td></tr>
+        <tr><td>消息监听</td><td>所有群/频道（含受限）</td><td>被添加为管理员的群</td></tr>
+        <tr><td>受限内容</td><td><span class="tag tag-green">可读取</span></td><td><span class="tag tag-red">不可</span></td></tr>
+        <tr><td>交互界面</td><td>无</td><td>InlineKeyboard / Command</td></tr>
+        <tr><td>封号风险</td><td><span class="tag tag-amber">高（需限速）</span></td><td><span class="tag tag-green">极低</span></td></tr>
+        <tr><td>典型操作</td><td>转发 / 镜像 / 监控 / 管理</td><td>命令响应 / 通知推送 / 菜单</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>DualClient 消息发送策略</h3>
+  <pre><code>send_message(chat_id, text, <span style="color:var(--accent-amber)">prefer_bot=True</span>)
+  │
+  ├─ prefer_bot=True  → 先 Bot，失败后 fallback Userbot
+  └─ prefer_bot=False → 先 Userbot，失败后 fallback Bot
+
+notify_admin(text)  → <span style="color:var(--accent-green)">永远使用 Bot</span>（官方通知通道）</code></pre>
+
+  <h3>FloodWait 处理链</h3>
+  <pre><code>Telegram API 返回 FloodWaitError(seconds=N)
+  ↓
+客户端捕获 → 发射 "flood_wait" 事件
+  ↓
+RateLimiter.handle_flood_wait(N):
+  · 实际等待 = N × 1.5 + 随机抖动
+  · 连续触发计数 +1
+  · 连续 ≥ 3 次 → <span style="color:var(--accent-red)">全局暂停 5 分钟</span>
+  ↓
+成功发送后 → reset_flood_counter()</code></pre>
+</section>
+
+<!-- ═══════════ 7. 插件系统 ═══════════ -->
+<section class="section" id="plugin-system">
+  <div class="section-header">
+    <div class="section-icon">⧉</div>
+    <h2>插件系统</h2>
+  </div>
+  <p>所有功能以插件形式存在。每个插件继承 <code>PluginBase</code>，实现 <code>name</code>、<code>description</code>、<code>setup()</code>、<code>teardown()</code>。</p>
+
+  <h3>插件生命周期</h3>
+  <pre><code>PluginLoader.discover()    <span style="color:var(--text-dim)"># 扫描 plugins/ 目录，发现插件类</span>
+  ↓
+PluginManager.load_all()   <span style="color:var(--text-dim)"># 匹配 plugins.enabled 通配符</span>
+  ↓
+plugin = PluginClass(client, config, event_bus, db, llm)
+  ↓
+await plugin.setup()       <span style="color:var(--text-dim)"># 注册事件处理器、订阅事件</span>
+  ↓
+<span style="color:var(--accent-green)"># ... 运行中 ...</span>
+  ↓
+await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、释放资源</span></code></pre>
+
+  <h3>已注册插件</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>插件名</th><th>类名</th><th>功能</th></tr></thead>
+      <tbody>
+        <tr><td><code>message.sender</code></td><td>SenderPlugin</td><td>消息发送服务</td></tr>
+        <tr><td><code>message.forwarder</code></td><td>ForwarderPlugin</td><td>规则转发（keyword/regex 过滤）</td></tr>
+        <tr><td><code>message.recorder</code></td><td>MessageRecorderPlugin</td><td>消息入库持久化</td></tr>
+        <tr><td><code>channel.mirror</code></td><td>MirrorPlugin</td><td>频道镜像同步</td></tr>
+        <tr><td><code>channel.copy_clean</code></td><td>CopyCleanPlugin</td><td>去标签消息复制</td></tr>
+        <tr><td><code>group.admin_actions</code></td><td>AdminActionsPlugin</td><td>ban/mute/warn/kick</td></tr>
+        <tr><td><code>group.welcome</code></td><td>WelcomePlugin</td><td>欢迎消息</td></tr>
+        <tr><td><code>auto_reply.rule_engine</code></td><td>RuleEnginePlugin</td><td>规则匹配引擎</td></tr>
+        <tr><td><code>auto_reply.template_reply</code></td><td>TemplateReplyPlugin</td><td>模板回复</td></tr>
+        <tr><td><code>scheduler.cron_sender</code></td><td>CronSenderPlugin</td><td>Cron 定时消息</td></tr>
+        <tr><td><code>ai_summary.chat_summarizer</code></td><td>ChatSummarizerPlugin</td><td>群聊 AI 总结</td></tr>
+        <tr><td><code>ai_summary.content_summarizer</code></td><td>ContentSummarizerPlugin</td><td>URL 内容总结</td></tr>
+        <tr><td><code>ai_summary.ask_handler</code></td><td>AskHandlerPlugin</td><td>AI 问答</td></tr>
+        <tr><td><code>monitor.keyword_alert</code></td><td>KeywordAlertPlugin</td><td>关键词告警</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>热重载</h3>
+  <p>通过 Bot 命令 <code>/reload &lt;plugin_name&gt;</code> 可热重载指定插件。重载时仅清理目标插件的 <code>sys.modules</code> 缓存，不影响其他插件。</p>
+</section>
+
+<!-- ═══════════ 8. 事件总线 ═══════════ -->
+<section class="section" id="event-bus">
+  <div class="section-header">
+    <div class="section-icon">⇶</div>
+    <h2>事件总线</h2>
+  </div>
+  <p>EventBus 是模块间解耦通信的核心。插件在 <code>setup()</code> 中订阅事件，Handler 通过 <code>emit()</code> 发布事件。异常被隔离——单个处理器失败不影响其他处理器。</p>
+
+  <h3>事件清单（31 种）</h3>
+  <details>
+    <summary>🔄 客户端生命周期事件</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>事件名</th><th>发布者</th><th>参数</th></tr></thead>
+        <tbody>
+          <tr><td><code>userbot_started</code></td><td>UserbotClient</td><td>user_id</td></tr>
+          <tr><td><code>bot_started</code></td><td>BotClient</td><td>bot_id</td></tr>
+          <tr><td><code>dual_client_started</code></td><td>DualClient</td><td>—</td></tr>
+          <tr><td><code>dual_client_stopping</code></td><td>DualClient</td><td>—</td></tr>
+          <tr><td><code>flood_wait</code></td><td>Userbot / Bot</td><td>seconds, client</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+  <details>
+    <summary>✉ 消息事件</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>事件名</th><th>发布者</th><th>订阅者</th></tr></thead>
+        <tbody>
+          <tr><td><code>send_message</code></td><td>各插件</td><td>message.sender</td></tr>
+          <tr><td><code>message_sent</code></td><td>message.sender</td><td>—</td></tr>
+          <tr><td><code>message_received</code></td><td>message.recorder</td><td>—</td></tr>
+          <tr><td><code>message_forwarded</code></td><td>message.forwarder</td><td>—</td></tr>
+          <tr><td><code>message_mirrored</code></td><td>channel.mirror</td><td>—</td></tr>
+          <tr><td><code>copy_clean_message</code></td><td>forwarder / mirror</td><td>copy_clean</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+  <details>
+    <summary>👥 管理事件</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>事件名</th><th>发布者</th><th>订阅者</th></tr></thead>
+        <tbody>
+          <tr><td><code>ban_user</code></td><td>AdminHandler</td><td>admin_actions</td></tr>
+          <tr><td><code>mute_user</code></td><td>AdminHandler</td><td>admin_actions</td></tr>
+          <tr><td><code>warn_user</code></td><td>AdminHandler</td><td>admin_actions</td></tr>
+          <tr><td><code>kick_user</code></td><td>AdminHandler</td><td>admin_actions</td></tr>
+          <tr><td><code>user_banned</code></td><td>admin_actions</td><td>—</td></tr>
+          <tr><td><code>user_muted</code></td><td>admin_actions</td><td>—</td></tr>
+          <tr><td><code>user_warned</code></td><td>admin_actions</td><td>—</td></tr>
+          <tr><td><code>user_kicked</code></td><td>admin_actions</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+  <details>
+    <summary>🧠 AI 与调度事件</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>事件名</th><th>发布者</th><th>订阅者</th></tr></thead>
+        <tbody>
+          <tr><td><code>summarize_chat</code></td><td>SummaryHandler</td><td>chat_summarizer</td></tr>
+          <tr><td><code>summarize_content</code></td><td>SummaryHandler</td><td>content_summarizer</td></tr>
+          <tr><td><code>ask_ai</code></td><td>SummaryHandler</td><td>ask_handler</td></tr>
+          <tr><td><code>schedule_add</code></td><td>SummaryHandler</td><td>cron_sender</td></tr>
+          <tr><td><code>schedule_remove</code></td><td>SummaryHandler</td><td>cron_sender</td></tr>
+          <tr><td><code>schedule_list</code></td><td>SummaryHandler</td><td>cron_sender</td></tr>
+          <tr><td><code>auto_reply_matched</code></td><td>rule_engine</td><td>template_reply</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+</section>
+
+<!-- ═══════════ 9. 速率限制 ═══════════ -->
+<section class="section" id="rate-limiter">
+  <div class="section-header">
+    <div class="section-icon">⏱</div>
+    <h2>速率限制</h2>
+  </div>
+  <p><strong>防封号第一</strong>：所有 Telegram API 调用必须经过 RateLimiter。采用多维限速 + FloodWait 自适应退避 + TOCTOU 安全的时间槽预留机制。</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>限制维度</th><th>默认值</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>全局消息</td><td><code>30 条/分钟</code></td><td>滑动窗口，60 秒内最多 30 条</td></tr>
+        <tr><td>单聊天间隔</td><td><code>3.0 秒</code></td><td>同一聊天两次发送最小间隔</td></tr>
+        <tr><td>加入群组</td><td><code>20 个/天</code></td><td>每日加群上限，超限抛 RateLimitError</td></tr>
+        <tr><td>添加成员</td><td><code>50 人/天</code></td><td>每日加人上限，间隔 30 秒</td></tr>
+        <tr><td>文件下载</td><td><code>并发 3 个</code></td><td>Semaphore 控制并发数</td></tr>
+        <tr><td>FloodWait 倍数</td><td><code>1.5×</code></td><td>Telegram 要求等 N 秒，实际等 N×1.5 秒</td></tr>
+        <tr><td>FloodWait 熔断</td><td><code>连续 3 次</code></td><td>连续触发 3 次 → 全局暂停 5 分钟</td></tr>
+        <tr><td>随机抖动</td><td><code>0.5 ~ 2.0 秒</code></td><td>所有间隔附加随机延迟</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout callout-warn">
+    <span class="callout-icon">🔒</span>
+    <div><strong>TOCTOU 防护：</strong>时间戳在锁内预留（<code>_global_timestamps.append(future_ts)</code>），确保多个并发协程不会同时通过限速检查。实际 sleep 在锁外执行，避免序列化。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 10. 消息管理 ═══════════ -->
+<section class="section" id="message">
+  <div class="section-header">
+    <div class="section-icon">✉</div>
+    <h2>消息管理</h2>
+  </div>
+
+  <h3>message.sender — 消息发送</h3>
+  <p>订阅 <code>send_message</code> 事件，通过 DualClient 发送消息。支持参数：</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>参数</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>chat_id</code></td><td>int</td><td>是</td><td>目标聊天 ID</td></tr>
+      <tr><td><code>text</code></td><td>str</td><td>是</td><td>消息内容</td></tr>
+      <tr><td><code>prefer_bot</code></td><td>bool</td><td>否</td><td>优先使用 Bot（默认 True）</td></tr>
+      <tr><td><code>file</code></td><td>—</td><td>否</td><td>附件媒体</td></tr>
+      <tr><td><code>reply_to</code></td><td>int</td><td>否</td><td>回复的消息 ID</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>message.forwarder — 消息转发</h3>
+  <p>基于数据库 <code>ForwardRule</code> 自动转发非频道消息（频道由 mirror 处理）。支持三种转发模式和两种过滤类型：</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-blue">forward</span></div>
+      <p class="card-desc">标准转发，保留「转发自 XXX」标签</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-green">copy</span></div>
+      <p class="card-desc">复制消息，无转发标签，保留媒体和格式</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-purple">copy_clean</span></div>
+      <p class="card-desc">委托 CopyCleanPlugin 去除所有来源标记</p>
+    </div>
+  </div>
+
+  <h4>过滤类型</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>类型</th><th>匹配方式</th><th>示例</th></tr></thead>
+    <tbody>
+      <tr><td><code>keyword</code></td><td>大小写不敏感子串</td><td>pattern="重要" → 匹配含"重要"的消息</td></tr>
+      <tr><td><code>regex</code></td><td>Python 正则搜索</td><td>pattern="价格\d+" → 匹配"价格100"</td></tr>
+      <tr><td><code>none</code></td><td>不过滤，转发所有</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>message.recorder — 消息入库</h3>
+  <p>监听所有消息（收发），持久化到数据库供搜索和 AI 总结复用。记录字段：</p>
+  <p><code>message_id</code>, <code>chat_id</code>, <code>sender_id</code>, <code>date</code>, <code>text</code>, <code>media_type</code>, <code>is_forward</code>, <code>forward_from_chat_id</code>, <code>reply_to_msg_id</code>, <code>grouped_id</code>, <code>views</code>, <code>is_pinned</code></p>
+</section>
+
+<!-- ═══════════ 11. 频道管理 ═══════════ -->
+<section class="section" id="channel">
+  <div class="section-header">
+    <div class="section-icon">📢</div>
+    <h2>频道管理</h2>
+  </div>
+
+  <h3>channel.mirror — 频道镜像</h3>
+  <p>监控源频道新消息，自动同步到目标频道。仅处理频道/超级群消息（<code>event.is_channel</code>），忽略自身发送。</p>
+  <pre><code>源频道消息 → 查询 ForwardRule → 按 forward_type 执行
+  ├─ forward → userbot.forward_message()
+  ├─ copy    → userbot.send_message() + media + entities
+  └─ copy_clean → emit("copy_clean_message") → CopyCleanPlugin 处理</code></pre>
+
+  <h3>channel.copy_clean — 去标签复制</h3>
+  <p>订阅 <code>copy_clean_message</code> 事件，获取原消息后重新发送（无转发标签），保留文本、媒体和格式实体。</p>
+</section>
+
+<!-- ═══════════ 12. 群组管理 ═══════════ -->
+<section class="section" id="group">
+  <div class="section-header">
+    <div class="section-icon">👥</div>
+    <h2>群组管理</h2>
+  </div>
+
+  <h3>管理操作</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>操作</th><th>Bot 命令</th><th>Telethon API</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr><td><strong>封禁</strong></td><td><code>/ban &lt;uid&gt; [原因]</code></td><td>EditBannedRequest(view_messages=True)</td><td>永久封禁，不可查看消息</td></tr>
+      <tr><td><strong>禁言</strong></td><td><code>/mute &lt;uid&gt; [分钟]</code></td><td>EditBannedRequest(send_messages=True, ...)</td><td>限时禁言（默认 60 分钟），禁止发送文本/媒体/贴纸/GIF/投票</td></tr>
+      <tr><td><strong>警告</strong></td><td><code>/warn &lt;uid&gt; [原因]</code></td><td>—</td><td>警告计数 +1，达到上限（默认 3）自动封禁</td></tr>
+      <tr><td><strong>踢出</strong></td><td><code>/kick &lt;uid&gt;</code></td><td>kick_participant()</td><td>移出群组（可重新加入）</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div>所有管理命令支持两种用法：<strong>回复目标消息</strong>执行或<strong>直接指定 user_id</strong>。回复模式下 <code>/mute 10</code> 会正确按 10 分钟处理。</div>
+  </div>
+
+  <h3>group.welcome — 欢迎消息</h3>
+  <p>新成员加入时自动发送欢迎消息。支持模板变量：</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>变量</th><th>内容</th><th>安全处理</th></tr></thead>
+    <tbody>
+      <tr><td><code>{user_name}</code></td><td>用户显示名（@username 或名字）</td><td>转义 <code>{}</code> 防注入</td></tr>
+      <tr><td><code>{user_id}</code></td><td>Telegram 用户 ID</td><td>数值型，无需转义</td></tr>
+      <tr><td><code>{chat_title}</code></td><td>群组名称</td><td>转义 <code>{}</code> 防注入</td></tr>
+      <tr><td><code>{chat_id}</code></td><td>群组 ID</td><td>数值型，无需转义</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ═══════════ 13. 自动回复 ═══════════ -->
+<section class="section" id="auto-reply">
+  <div class="section-header">
+    <div class="section-icon">🤖</div>
+    <h2>自动回复</h2>
+  </div>
+  <h3>rule_engine — 规则匹配</h3>
+  <p>监听消息，根据 <code>AutoReplyRule</code> 数据库规则自动匹配并触发回复。支持三种匹配方式：</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>rule_type</th><th>匹配逻辑</th><th>示例</th></tr></thead>
+    <tbody>
+      <tr><td><code>keyword</code></td><td>大小写不敏感子串搜索</td><td>"你好" → 匹配所有含"你好"的消息</td></tr>
+      <tr><td><code>regex</code></td><td>Python 正则表达式</td><td>"价格\d+元" → 匹配"价格100元"</td></tr>
+      <tr><td><code>exact</code></td><td>完全匹配（忽略大小写）</td><td>"帮助" → 仅匹配单独的"帮助"</td></tr>
+    </tbody>
+  </table></div>
+  <p>规则按 <code>priority</code> 排序，高优先级先匹配。匹配成功后发射 <code>auto_reply_matched</code> 事件。</p>
+
+  <h3>template_reply — 模板回复</h3>
+  <p>订阅 <code>auto_reply_matched</code> 事件，用规则中定义的 <code>response</code> 模板生成回复。用户输入中的 <code>{}</code> 字符会被转义，防止模板注入。</p>
+</section>
+
+<!-- ═══════════ 14. 定时任务 ═══════════ -->
+<section class="section" id="scheduler">
+  <div class="section-header">
+    <div class="section-icon">⏰</div>
+    <h2>定时任务</h2>
+  </div>
+  <p>基于 APScheduler 3.x 的 AsyncIOScheduler，Cron 任务持久化到数据库，崩溃重启后自动恢复。</p>
+
+  <h3>Cron 表达式格式</h3>
+  <pre><code>┌───── 分 (0-59)
+│ ┌───── 时 (0-23)
+│ │ ┌───── 日 (1-31)
+│ │ │ ┌───── 月 (1-12)
+│ │ │ │ ┌───── 周 (0-6, 0=周一)
+│ │ │ │ │
+* * * * *
+
+<span style="color:var(--accent-green)">示例:</span>
+0 9 * * *     <span style="color:var(--text-dim)"># 每天 9:00</span>
+*/30 * * * *  <span style="color:var(--text-dim)"># 每 30 分钟</span>
+0 8 * * 1-5   <span style="color:var(--text-dim)"># 工作日 8:00</span></code></pre>
+
+  <h3>管理命令</h3>
+  <div class="cmd-item"><span class="cmd-name">/schedule list</span><span class="cmd-desc">列出所有启用的定时任务</span></div>
+  <div class="cmd-item"><span class="cmd-name">/schedule add &lt;名称&gt; &lt;分&gt; &lt;时&gt; &lt;日&gt; &lt;月&gt; &lt;周&gt; &lt;消息&gt;</span><span class="cmd-desc">创建定时任务</span></div>
+  <div class="cmd-item"><span class="cmd-name">/schedule remove &lt;ID&gt;</span><span class="cmd-desc">停止并删除指定任务</span></div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div><strong>崩溃安全：</strong>添加时先验证 cron 再写 DB；删除时先标记 DB 禁用再从调度器移除。确保 DB 与调度器状态一致。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 15. AI 总结 ═══════════ -->
+<section class="section" id="ai-summary">
+  <div class="section-header">
+    <div class="section-icon">🧠</div>
+    <h2>AI 总结</h2>
+  </div>
+
+  <h3>chat_summarizer — 群聊总结</h3>
+  <p>通过 <code>/summarize [N]</code> 命令触发。先从数据库读取最近 N 条消息（由 recorder 插件入库），如不足则回退实时拉取。使用 LLM 生成中文摘要。</p>
+
+  <h3>content_summarizer — URL 总结</h3>
+  <p>通过 <code>/url &lt;链接&gt;</code> 命令触发。流程：</p>
+  <pre><code>1. SSRF 防护：验证 URL 非内网地址（is_safe_url）
+2. 安全重定向：每跳验证目标 IP（最多 5 跳）
+3. 内容提取：readability → BeautifulSoup → 纯文本
+4. 截断至 8000 字符
+5. LLM 生成摘要</code></pre>
+
+  <h3>ask_handler — AI 问答</h3>
+  <p>通过 <code>/ask &lt;问题&gt;</code> 命令触发。直接将问题发送给 LLM，返回简洁回答。</p>
+</section>
+
+<!-- ═══════════ 16. 监控告警 ═══════════ -->
+<section class="section" id="monitor">
+  <div class="section-header">
+    <div class="section-icon">🚨</div>
+    <h2>监控告警</h2>
+  </div>
+  <p>实时监控消息，根据配置的关键词和正则表达式触发告警，通过 Bot 推送给管理员。</p>
+
+  <h3>配置示例</h3>
+  <pre><code><span style="color:var(--accent-amber)">plugin_config:</span>
+  monitor:
+    keywords:
+      - "紧急"
+      - "故障"
+      - "down"
+    regex_patterns:
+      - "价格[超过]*\d+万"
+      - "error\s*code\s*\d+"
+    monitored_chats: []  <span style="color:var(--text-dim)"># 空 = 监控所有聊天</span></code></pre>
+
+  <h3>告警消息格式</h3>
+  <pre><code>🔔 关键词告警
+
+匹配: <span style="color:var(--accent-amber)">紧急</span>
+聊天: -1001234567890
+发送者: John (ID: 123456)
+内容: 系统出现紧急故障，需要立即处理...</code></pre>
+
+  <p>匹配优先级：先尝试关键词匹配（更快），无命中再尝试正则匹配。</p>
+</section>
+
+<!-- ═══════════ 17. 命令大全 ═══════════ -->
+<section class="section" id="commands">
+  <div class="section-header">
+    <div class="section-icon">⌘</div>
+    <h2>命令大全</h2>
+  </div>
+
+  <h3>公开命令</h3>
+  <div class="cmd-item"><span class="cmd-name">/start <span class="cmd-badge public">公开</span></span><span class="cmd-desc">打开主菜单，显示所有功能模块入口</span></div>
+  <div class="cmd-item"><span class="cmd-name">/help <span class="cmd-badge public">公开</span></span><span class="cmd-desc">显示所有可用命令列表</span></div>
+
+  <h3>管理员命令</h3>
+  <div class="cmd-item"><span class="cmd-name">/status <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">查看系统状态（版本、已加载插件数）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/plugins <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">列出所有已加载插件，支持点击查看详情</span></div>
+  <div class="cmd-item"><span class="cmd-name">/reload &lt;name&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">热重载指定插件，例如 <code>/reload message.sender</code></span></div>
+  <div class="cmd-item"><span class="cmd-name">/config <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">查看当前配置摘要</span></div>
+  <div class="cmd-item"><span class="cmd-name">/ban &lt;user_id&gt; [原因] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">永久封禁用户（或回复消息执行）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/mute &lt;user_id&gt; [分钟] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">禁言用户（默认 60 分钟）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/warn &lt;user_id&gt; [原因] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">警告用户（3 次自动封禁）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/kick &lt;user_id&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">踢出用户（可重新加入）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/summarize [N] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">AI 总结当前聊天最近 N 条消息（默认 200）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/ask &lt;问题&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">向 AI 提问，返回简洁回答</span></div>
+  <div class="cmd-item"><span class="cmd-name">/url &lt;链接&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">提取并总结网页内容（含 SSRF 防护）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/schedule list <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">列出所有定时任务</span></div>
+  <div class="cmd-item"><span class="cmd-name">/schedule add ... <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">创建定时任务：<code>/schedule add 日报 0 9 * * * 早安</code></span></div>
+  <div class="cmd-item"><span class="cmd-name">/schedule remove &lt;ID&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">停止并删除指定定时任务</span></div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div><code>/command@OtherBot</code> 不会被本 Bot 误接收。CommandRouter 会验证 <code>@username</code> 后缀是否匹配当前 Bot。</div>
+  </div>
+</section>
+
+<!-- ═══════════ 18. LLM 多模型 ═══════════ -->
+<section class="section" id="llm">
+  <div class="section-header">
+    <div class="section-icon">◎</div>
+    <h2>LLM 多模型支持</h2>
+  </div>
+  <p>统一的 <code>BaseLLMProvider</code> 接口，通过工厂模式切换模型。支持同步和流式两种调用方式。</p>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Provider</th><th>协议</th><th>默认模型</th><th>特点</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-green">OpenAI</span></td><td>httpx (REST)</td><td>gpt-4o</td><td>支持自定义 base_url</td></tr>
+      <tr><td><span class="tag tag-purple">Claude</span></td><td>anthropic SDK</td><td>claude-sonnet-4</td><td>system 消息独立传递</td></tr>
+      <tr><td><span class="tag tag-blue">Gemini</span></td><td>httpx (REST)</td><td>gemini-2.0-flash</td><td>systemInstruction 字段</td></tr>
+      <tr><td><span class="tag tag-amber">DeepSeek</span></td><td>继承 OpenAI</td><td>deepseek-chat</td><td>仅覆盖 base_url</td></tr>
+      <tr><td><span class="tag tag-red">Ollama</span></td><td>httpx (REST)</td><td>llama3</td><td>本地部署，/api/chat</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Provider 接口</h3>
+  <pre><code><span style="color:var(--accent-purple)">class</span> BaseLLMProvider(ABC):
+    <span style="color:var(--accent-green)">async def</span> chat(messages: list[ChatMessage]) -> LLMResponse
+    <span style="color:var(--accent-green)">async def</span> chat_stream(messages) -> AsyncIterator[str]
+    <span style="color:var(--accent-green)">async def</span> summarize(text, instruction) -> str</code></pre>
+
+  <h3>提示词模板</h3>
+  <p>内置 3 种提示词模板（<code>prompt_templates.py</code>）：</p>
+  <ul style="color:var(--text-secondary);padding-left:20px;">
+    <li><code>CHAT_SUMMARY</code> — 群聊消息总结</li>
+    <li><code>CONTENT_SUMMARY</code> — URL/文章内容总结</li>
+    <li><code>QA_ANSWER</code> — 问答</li>
+  </ul>
+</section>
+
+<!-- ═══════════ 19. 数据库模型 ═══════════ -->
+<section class="section" id="database">
+  <div class="section-header">
+    <div class="section-icon">▦</div>
+    <h2>数据库模型</h2>
+  </div>
+  <p>使用 SQLAlchemy 2.x 异步 ORM。开发用 SQLite，生产用 PostgreSQL，通过 <code>DATABASE_URL</code> 切换。</p>
+
+  <details>
+    <summary><code>telegram_messages</code> — 消息记录</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>列名</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT PK</td><td>自增主键</td></tr>
+          <tr><td><code>message_id</code></td><td>BIGINT</td><td>Telegram 消息 ID</td></tr>
+          <tr><td><code>chat_id</code></td><td>BIGINT (索引)</td><td>聊天 ID</td></tr>
+          <tr><td><code>sender_id</code></td><td>BIGINT?</td><td>发送者 ID</td></tr>
+          <tr><td><code>date</code></td><td>DATETIME(tz)</td><td>消息时间</td></tr>
+          <tr><td><code>text</code></td><td>TEXT</td><td>消息内容</td></tr>
+          <tr><td><code>media_type</code></td><td>VARCHAR(50)?</td><td>photo/video/audio/voice/document</td></tr>
+          <tr><td><code>is_forward</code></td><td>BOOL</td><td>是否转发</td></tr>
+          <tr><td><code>forward_from_chat_id</code></td><td>BIGINT?</td><td>原始频道 ID</td></tr>
+          <tr><td><code>reply_to_msg_id</code></td><td>BIGINT?</td><td>回复的消息 ID</td></tr>
+          <tr><td><code>views</code></td><td>INT?</td><td>浏览数</td></tr>
+          <tr><td><code>is_pinned</code></td><td>BOOL</td><td>是否置顶</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:12px;color:var(--text-dim);">唯一索引：(chat_id, message_id)，防止消息重复。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>chats</code> — 聊天/频道</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>列名</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>chat_id</code></td><td>BIGINT UNIQUE</td><td>Telegram 聊天 ID</td></tr>
+          <tr><td><code>chat_type</code></td><td>VARCHAR(20)</td><td>user / group / channel</td></tr>
+          <tr><td><code>title</code></td><td>VARCHAR(255)?</td><td>名称</td></tr>
+          <tr><td><code>is_monitored</code></td><td>BOOL</td><td>是否启用关键词监控</td></tr>
+          <tr><td><code>is_mirror_source</code></td><td>BOOL</td><td>是否为镜像源</td></tr>
+          <tr><td><code>is_mirror_target</code></td><td>BOOL</td><td>是否为镜像目标</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>users</code> — 用户</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>列名</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>user_id</code></td><td>BIGINT UNIQUE</td><td>Telegram 用户 ID</td></tr>
+          <tr><td><code>username</code></td><td>VARCHAR(100)?</td><td>@用户名</td></tr>
+          <tr><td><code>is_banned</code></td><td>BOOL</td><td>全局封禁状态</td></tr>
+          <tr><td><code>warn_count</code></td><td>INT (默认 0)</td><td>累计警告次数</td></tr>
+          <tr><td><code>ban_reason</code></td><td>TEXT?</td><td>封禁原因</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>auto_reply_rules</code> — 自动回复规则</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>列名</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>VARCHAR(100)</td><td>规则名称</td></tr>
+          <tr><td><code>rule_type</code></td><td>VARCHAR(20)</td><td>keyword / regex / exact</td></tr>
+          <tr><td><code>pattern</code></td><td>VARCHAR(500)</td><td>匹配模式</td></tr>
+          <tr><td><code>response</code></td><td>TEXT</td><td>回复内容模板</td></tr>
+          <tr><td><code>chat_id</code></td><td>BIGINT?</td><td>目标聊天（NULL=全局）</td></tr>
+          <tr><td><code>priority</code></td><td>INT (默认 0)</td><td>优先级（越高越先匹配）</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>forward_rules</code> — 转发规则</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>列名</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>source_chat_id</code></td><td>BIGINT (索引)</td><td>源聊天 ID</td></tr>
+          <tr><td><code>target_chat_id</code></td><td>BIGINT</td><td>目标聊天 ID</td></tr>
+          <tr><td><code>forward_type</code></td><td>VARCHAR(20)</td><td>forward / copy / copy_clean</td></tr>
+          <tr><td><code>filter_pattern</code></td><td>VARCHAR(500)?</td><td>过滤模式</td></tr>
+          <tr><td><code>filter_type</code></td><td>VARCHAR(20)</td><td>keyword / regex / none</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>scheduled_jobs</code> — 定时任务</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>列名</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>VARCHAR(100)</td><td>任务名称</td></tr>
+          <tr><td><code>cron_expr</code></td><td>VARCHAR(100)</td><td>Cron 表达式（5 字段）</td></tr>
+          <tr><td><code>target_chat_id</code></td><td>BIGINT</td><td>发送目标</td></tr>
+          <tr><td><code>message_text</code></td><td>TEXT</td><td>消息内容</td></tr>
+          <tr><td><code>timezone</code></td><td>VARCHAR(50)</td><td>时区（默认 Asia/Shanghai）</td></tr>
+          <tr><td><code>last_run_at</code></td><td>DATETIME?</td><td>上次执行时间</td></tr>
+          <tr><td><code>run_count</code></td><td>INT (默认 0)</td><td>累计执行次数</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+</section>
+
+<!-- ═══════════ 20. 安全机制 ═══════════ -->
+<section class="section" id="security">
+  <div class="section-header">
+    <div class="section-icon">🔒</div>
+    <h2>安全机制</h2>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-red">SSRF 防护</span></div>
+      <p class="card-desc"><code>is_safe_url()</code> 在 URL 抓取前解析 DNS 并验证目标 IP 非私网/回环/链路本地/保留地址。重定向跟随时每跳重新验证。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-red">模板注入防护</span></div>
+      <p class="card-desc">欢迎消息和自动回复中，用户控制的字段（用户名、群名）在传入 <code>str.format()</code> 前转义 <code>{}</code> → <code>{{}}</code>。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-amber">权限检查</span></div>
+      <p class="card-desc"><code>admin_only</code> 装饰器和 <code>_check_admin</code> 方法确保管理员命令仅 <code>admin_user_id</code> 可执行。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-amber">命令节流</span></div>
+      <p class="card-desc"><code>throttle</code> 装饰器限制命令调用频率，防止滥用。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-blue">凭据隔离</span></div>
+      <p class="card-desc">敏感信息（API Key、Token、手机号）存放 <code>.env</code>，<code>.session</code> 文件在 <code>.gitignore</code> 中排除。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-blue">异常泄露防护</span></div>
+      <p class="card-desc"><code>/reload</code> 失败时仅输出通用错误消息，不暴露原始异常栈。回调数据解码使用 <code>errors="replace"</code>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 21. 常见问题 ═══════════ -->
+<section class="section" id="faq">
+  <div class="section-header">
+    <div class="section-icon">?</div>
+    <h2>常见问题</h2>
+  </div>
+
+  <details>
+    <summary>启动时报 "配置字段 api_id 必须为整数"？</summary>
+    <div class="detail-content">
+      <p><code>.env</code> 中的 <code>TG_API_ID</code> 必须是纯数字。确认没有引号包裹，且 <code>.env</code> 文件已正确加载（与项目根目录同级）。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Bot 不响应命令？</summary>
+    <div class="detail-content">
+      <p>1. 确认 Bot Token 正确且 Bot 已启动<br>
+      2. 检查你的 Telegram 账号 ID 是否与 <code>TG_ADMIN_USER_ID</code> 一致（管理员命令仅限此 ID）<br>
+      3. 检查日志中是否有 <code>registered command</code> 信息</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>FloodWait 导致功能暂停？</summary>
+    <div class="detail-content">
+      <p>这是 Telegram 的频率限制。系统会自动等待 <code>N × 1.5</code> 秒后重试。连续触发 3 次会全局暂停 5 分钟。解决方法：降低操作频率，或调整 <code>rate_limit</code> 配置。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>如何切换 LLM 模型？</summary>
+    <div class="detail-content">
+      <p>修改 <code>config.yaml</code> 中 <code>llm.default_provider</code> 的值。可选：<code>openai</code>、<code>claude</code>、<code>gemini</code>、<code>deepseek</code>、<code>ollama</code>。确保对应的 API Key 已配置。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>如何添加转发规则？</summary>
+    <div class="detail-content">
+      <p>当前版本通过直接在数据库 <code>forward_rules</code> 表中插入记录来管理。需要设置 <code>source_chat_id</code>、<code>target_chat_id</code>、<code>forward_type</code>。后续版本将添加 Bot 命令管理界面。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>如何运行测试？</summary>
+    <div class="detail-content">
+      <pre><code>python -m pytest -q</code></pre>
+      <p>当前覆盖：命令路由匹配、SQLite 目录创建、插件配置合并、mute 参数解析。</p>
+    </div>
+  </details>
+</section>
+
+</div><!-- end .content -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>TG Manager v0.1.0 · MIT License</span>
+  <span>Built with Telethon · SQLAlchemy · APScheduler · httpx</span>
+</div>
+
+</main>
+
+<!-- ═══ SIDEBAR NAV HIGHLIGHT ═══ -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const links = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('.section[id], .hero');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        links.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => { if (s.id) observer.observe(s); });
+});
+</script>
+</body>
+</html>
