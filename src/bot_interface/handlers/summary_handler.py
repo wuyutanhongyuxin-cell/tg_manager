@@ -25,25 +25,53 @@ class SummaryHandler:
         return True
 
     async def handle_summarize(self, event: Any) -> None:
+        """/summarize [限制] [chat_id] — 支持远程指定群组
+
+        参数顺序无关：
+        - 负数（例 -1001234567890）→ 目标 chat_id
+        - 正整数（例 100）→ 消息条数上限
+        缺省时使用当前聊天和默认 200 条。
+        """
         if not await self._check_admin(event):
             return
 
-        parts = event.raw_text.split()
+        parts = event.raw_text.split()[1:]
         limit = 200
-        if len(parts) > 1:
-            try:
-                limit = min(int(parts[1]), 1000)
-            except ValueError:
-                await event.reply("用法: /summarize [消息数量]\n默认 200 条")
+        target_chat_id: int | None = None
+
+        for token in parts:
+            if token.startswith("-") and token[1:].isdigit():
+                target_chat_id = int(token)
+            elif token.isdigit():
+                limit = min(int(token), 1000)
+            else:
+                await event.reply(
+                    "用法: /summarize [消息数量] [chat_id]\n"
+                    "例: /summarize 100\n"
+                    "例: /summarize 100 -1001234567890\n"
+                    "例: /summarize -1001234567890\n"
+                    "默认: 当前聊天 200 条"
+                )
                 return
 
-        chat = await event.get_chat()
-        chat_title = getattr(chat, "title", str(event.chat_id))
+        is_remote = target_chat_id is not None
+        chat_id = target_chat_id if is_remote else event.chat_id
 
-        await event.reply(f"正在总结《{chat_title}》最近 {limit} 条消息...")
+        if is_remote:
+            chat_title = ""  # 由插件通过 userbot 解析真实标题
+            await event.reply(
+                f"正在总结 chat `{chat_id}` 最近 {limit} 条消息..."
+            )
+        else:
+            chat = await event.get_chat()
+            chat_title = getattr(chat, "title", str(event.chat_id))
+            await event.reply(
+                f"正在总结《{chat_title}》最近 {limit} 条消息..."
+            )
+
         await self._event_bus.emit(
             "summarize_chat",
-            chat_id=event.chat_id,
+            chat_id=chat_id,
             reply_to_chat=event.chat_id,
             limit=limit,
             chat_title=chat_title,

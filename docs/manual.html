@@ -999,7 +999,7 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
   </div>
   <p>EventBus 是模块间解耦通信的核心。插件在 <code>setup()</code> 中订阅事件，Handler 通过 <code>emit()</code> 发布事件。异常被隔离——单个处理器失败不影响其他处理器。</p>
 
-  <h3>事件清单（31 种）</h3>
+  <h3>事件清单（34 种）</h3>
   <details>
     <summary>🔄 客户端生命周期事件</summary>
     <div class="detail-content">
@@ -1064,6 +1064,20 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
           <tr><td><code>auto_reply_matched</code></td><td>rule_engine</td><td>template_reply</td></tr>
         </tbody>
       </table></div>
+    </div>
+  </details>
+  <details>
+    <summary>🚨 监控关键词事件</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>事件名</th><th>发布者</th><th>订阅者</th></tr></thead>
+        <tbody>
+          <tr><td><code>keyword_add</code></td><td>KeywordHandler</td><td>keyword_alert</td></tr>
+          <tr><td><code>keyword_remove</code></td><td>KeywordHandler</td><td>keyword_alert</td></tr>
+          <tr><td><code>keyword_list</code></td><td>KeywordHandler</td><td>keyword_alert</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:12px;color:var(--text-dim);">事件参数包含 <code>keyword</code>、<code>created_by</code>、<code>reply_to_chat</code>。插件处理后通过 <code>client.send_message(reply_to_chat, ...)</code> 回复操作结果。</p>
     </div>
   </details>
 </section>
@@ -1268,7 +1282,25 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
   </div>
 
   <h3>chat_summarizer — 群聊总结</h3>
-  <p>通过 <code>/summarize [N]</code> 命令触发。先从数据库读取最近 N 条消息（由 recorder 插件入库），如不足则回退实时拉取。使用 LLM 生成中文摘要。</p>
+  <p>通过 <code>/summarize [N] [chat_id]</code> 命令触发。先从数据库读取最近 N 条消息（由 recorder 插件入库），如不足则回退实时拉取。使用 LLM 生成中文摘要。</p>
+  <p>参数顺序无关：负数（如 <code>-1001234567890</code>）解析为目标 chat_id，正整数（如 <code>100</code>）解析为消息条数上限。缺省时使用当前聊天和默认 200 条。</p>
+
+  <pre><code><span style="color:var(--text-dim)"># 当前聊天，200 条（默认）</span>
+/summarize
+
+<span style="color:var(--text-dim)"># 当前聊天，100 条</span>
+/summarize 100
+
+<span style="color:var(--text-dim)"># 远程指定群组，200 条 — Bot 不在群里也能用</span>
+/summarize -1001234567890
+
+<span style="color:var(--text-dim)"># 远程群组 + 自定义条数（顺序无关）</span>
+/summarize 100 -1001234567890</code></pre>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div>远程总结依赖 Userbot 已加入目标群。Bot 即使被踢出群组，只要 Userbot 仍是成员，<code>recorder</code> 持续入库 + <code>chat_summarizer</code> 远程拉取就能继续工作。聊天标题由 Userbot 通过 <code>get_entity</code> 自动解析。</div>
+  </div>
 
   <h3>content_summarizer — URL 总结</h3>
   <p>通过 <code>/url &lt;链接&gt;</code> 命令触发。流程：</p>
@@ -1288,19 +1320,37 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
     <div class="section-icon">🚨</div>
     <h2>监控告警</h2>
   </div>
-  <p>实时监控消息，根据配置的关键词和正则表达式触发告警，通过 Bot 推送给管理员。</p>
+  <p>实时监控消息，关键词命中后通过 Bot 把告警推送给管理员。关键词存储于数据库 <code>monitor_keywords</code> 表，运行时通过 <code>/keyword</code> 命令在 Telegram 中直接管理，无需修改 <code>config.yaml</code> 或重启服务。</p>
 
-  <h3>配置示例</h3>
+  <h3>命令式管理（推荐）</h3>
+  <pre><code><span style="color:var(--text-dim)"># 列出全部关键词</span>
+/keyword
+/keyword list
+
+<span style="color:var(--text-dim)"># 添加关键词（保存到 DB，立即生效）</span>
+/keyword add 紧急
+/keyword add 故障
+
+<span style="color:var(--text-dim)"># 移除关键词</span>
+/keyword remove 紧急
+/keyword del 紧急   <span style="color:var(--text-dim)"># 别名</span>
+/keyword rm 紧急    <span style="color:var(--text-dim)"># 别名</span></code></pre>
+
+  <p>命令处理流程：<code>KeywordHandler</code> 收到 <code>/keyword</code> → 通过事件总线发出 <code>keyword_add/remove/list</code> → <code>KeywordAlertPlugin</code> 写入数据库并刷新内存中的关键词列表 → 通过 Bot 回复操作结果。</p>
+
+  <h3>正则模式（高级，仍走配置）</h3>
+  <p>复杂正则匹配仍由 <code>config.yaml</code> 管理（修改后需重启）：</p>
   <pre><code><span style="color:var(--accent-amber)">plugin_config:</span>
   monitor:
-    keywords:
-      - "紧急"
-      - "故障"
-      - "down"
     regex_patterns:
       - "价格[超过]*\d+万"
       - "error\s*code\s*\d+"
     monitored_chats: []  <span style="color:var(--text-dim)"># 空 = 监控所有聊天</span></code></pre>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div>启动时若数据库 <code>monitor_keywords</code> 表为空且 <code>config.yaml</code> 中残留有 <code>keywords</code> 列表，插件会自动一次性迁移到数据库，便于从旧版无缝升级。</div>
+  </div>
 
   <h3>告警消息格式</h3>
   <pre><code>🔔 关键词告警
@@ -1333,12 +1383,16 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
   <div class="cmd-item"><span class="cmd-name">/mute &lt;user_id&gt; [分钟] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">禁言用户（默认 60 分钟）</span></div>
   <div class="cmd-item"><span class="cmd-name">/warn &lt;user_id&gt; [原因] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">警告用户（3 次自动封禁）</span></div>
   <div class="cmd-item"><span class="cmd-name">/kick &lt;user_id&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">踢出用户（可重新加入）</span></div>
-  <div class="cmd-item"><span class="cmd-name">/summarize [N] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">AI 总结当前聊天最近 N 条消息（默认 200）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/summarize [N] [chat_id] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">AI 总结指定/当前聊天最近 N 条消息。负数为目标 chat_id（远程总结），正整数为消息条数；缺省时 = 当前聊天 200 条</span></div>
   <div class="cmd-item"><span class="cmd-name">/ask &lt;问题&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">向 AI 提问，返回简洁回答</span></div>
   <div class="cmd-item"><span class="cmd-name">/url &lt;链接&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">提取并总结网页内容（含 SSRF 防护）</span></div>
   <div class="cmd-item"><span class="cmd-name">/schedule list <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">列出所有定时任务</span></div>
   <div class="cmd-item"><span class="cmd-name">/schedule add ... <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">创建定时任务：<code>/schedule add 日报 0 9 * * * 早安</code></span></div>
   <div class="cmd-item"><span class="cmd-name">/schedule remove &lt;ID&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">停止并删除指定定时任务</span></div>
+  <div class="cmd-item"><span class="cmd-name">/keyword [list] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">列出所有监控关键词（默认子命令）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/keyword add &lt;关键词&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">添加监控关键词，立即生效</span></div>
+  <div class="cmd-item"><span class="cmd-name">/keyword remove &lt;关键词&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">移除监控关键词（别名 <code>del</code>/<code>rm</code>）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/llm [name] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">查看或切换默认 LLM Provider</span></div>
 
   <div class="callout callout-info">
     <span class="callout-icon">💡</span>
@@ -1493,6 +1547,23 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
           <tr><td><code>run_count</code></td><td>INT (默认 0)</td><td>累计执行次数</td></tr>
         </tbody>
       </table></div>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>monitor_keywords</code> — 监控关键词</summary>
+    <div class="detail-content">
+      <div class="table-wrap"><table>
+        <thead><tr><th>列名</th><th>类型</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>INT PK</td><td>自增主键</td></tr>
+          <tr><td><code>keyword</code></td><td>VARCHAR(200) UNIQUE</td><td>监控关键词（包含匹配，大小写不敏感）</td></tr>
+          <tr><td><code>is_enabled</code></td><td>BOOL</td><td>是否启用</td></tr>
+          <tr><td><code>created_by</code></td><td>BIGINT?</td><td>创建者 Telegram ID</td></tr>
+          <tr><td><code>created_at</code></td><td>DATETIME(tz)</td><td>创建时间</td></tr>
+        </tbody>
+      </table></div>
+      <p style="font-size:12px;color:var(--text-dim);">由 <code>/keyword</code> 命令在 Telegram 中维护，<code>KeywordAlertPlugin</code> 启动时加载并订阅事件总线热更新。</p>
     </div>
   </details>
 </section>

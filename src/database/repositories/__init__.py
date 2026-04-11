@@ -7,6 +7,7 @@
 from .base_repo import BaseRepository
 from .chat_repo import ChatRepository
 from .forward_rule_repo import ForwardRuleRepository
+from .keyword_repo import KeywordRepository
 from .message_repo import MessageRepository
 from .rule_repo import RuleRepository
 from .schedule_repo import ScheduleRepository
@@ -16,6 +17,7 @@ __all__ = [
     "BaseRepository",
     "ChatRepository",
     "ForwardRuleRepository",
+    "KeywordRepository",
     "MessageRepository",
     "RuleRepository",
     "ScheduleRepository",

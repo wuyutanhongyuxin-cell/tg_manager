@@ -46,7 +46,7 @@ class ChatSummarizerPlugin(PluginBase):
             chat_id: 目标聊天 ID（必需）
             reply_to_chat: 回复发送到哪个聊天（必需）
             limit: 回溯消息条数（可选，默认使用配置值）
-            chat_title: 聊天标题（可选）
+            chat_title: 聊天标题（可选；为空时由 userbot 自动解析）
         """
         chat_id = kwargs.get("chat_id")
         reply_to = kwargs.get("reply_to_chat")
@@ -54,7 +54,7 @@ class ChatSummarizerPlugin(PluginBase):
             return
 
         limit = kwargs.get("limit", self._default_limit)
-        chat_title = kwargs.get("chat_title", str(chat_id))
+        chat_title = kwargs.get("chat_title") or await self._resolve_title(chat_id)
 
         try:
             # 1. 从数据库获取最近消息
@@ -79,6 +79,19 @@ class ChatSummarizerPlugin(PluginBase):
         except Exception as e:
             await self.client.send_message(reply_to, "总结生成时发生错误，请稍后重试。")
             self.logger.error("总结处理异常: %s", e)
+
+    async def _resolve_title(self, chat_id: int) -> str:
+        """通过 userbot 查询真实聊天标题，失败时返回 chat_id 字符串"""
+        try:
+            entity = await self.client.userbot.client.get_entity(chat_id)
+            return (
+                getattr(entity, "title", None)
+                or getattr(entity, "first_name", None)
+                or str(chat_id)
+            )
+        except Exception as e:
+            self.logger.debug("无法解析 chat_id=%s 的标题: %s", chat_id, e)
+            return str(chat_id)
 
     async def _fetch_messages(self, chat_id: int, limit: int) -> str:
         """从数据库获取消息并格式化为文本"""

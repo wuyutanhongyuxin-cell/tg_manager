@@ -7,6 +7,7 @@ DatabaseManager.init() 中的 create_all 依赖这些导入。
 from .chat import Chat
 from .forward_rule import ForwardRule
 from .message import TelegramMessage
+from .monitor_keyword import MonitorKeyword
 from .rule import AutoReplyRule
 from .scheduled_job import ScheduledJob
 from .user import User
@@ -15,6 +16,7 @@ __all__ = [
     "Chat",
     "ForwardRule",
     "TelegramMessage",
+    "MonitorKeyword",
     "AutoReplyRule",
     "ScheduledJob",
     "User",
