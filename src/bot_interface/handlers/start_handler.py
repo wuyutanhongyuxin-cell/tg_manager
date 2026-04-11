@@ -34,6 +34,8 @@ class StartHandler:
             f"📘 **{APP_NAME} 帮助**\n\n"
             "/start - 打开主菜单\n"
             "/help - 查看帮助\n"
+            "/whereami - 查看当前/转发源 chat_id（管理员）\n"
+            "/dialogs [关键词] - 列出/搜索最近会话（管理员）\n"
             "/status - 查看系统状态（管理员）\n"
             "/plugins - 查看已加载插件（管理员）\n"
             "/config - 查看配置摘要（管理员）\n"
@@ -42,7 +44,8 @@ class StartHandler:
             "/ask <问题> - 向 AI 提问（管理员）\n"
             "/url <链接> - 提取并总结网页内容（管理员）\n"
             "/schedule ... - 管理定时任务（管理员）\n"
-            "/keyword list|add|remove - 关键词监控管理（管理员）"
+            "/keyword list|add|remove - 关键词监控管理（管理员）\n"
+            "/forward list|add|remove|toggle|edit - 转发规则管理（管理员）"
         )
         await event.reply(help_text)
 

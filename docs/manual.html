@@ -622,6 +622,8 @@ details .detail-content { padding: 0 16px 16px; }
       <a class="nav-link" href="#scheduler"><span class="nav-icon">⏰</span> 定时任务</a>
       <a class="nav-link" href="#ai-summary"><span class="nav-icon">🧠</span> AI 总结</a>
       <a class="nav-link" href="#monitor"><span class="nav-icon">🚨</span> 监控告警</a>
+      <a class="nav-link" href="#forward-rules"><span class="nav-icon">📤</span> 转发规则</a>
+      <a class="nav-link" href="#inspect"><span class="nav-icon">🔍</span> 聊天检查</a>
     </div>
     <div class="nav-group">
       <div class="nav-group-title">参考</div>
@@ -1363,6 +1365,161 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
   <p>匹配优先级：先尝试关键词匹配（更快），无命中再尝试正则匹配。</p>
 </section>
 
+<!-- ═══════════ 16.5 转发规则管理 ═══════════ -->
+<section class="section" id="forward-rules">
+  <div class="section-header">
+    <div class="section-icon">📤</div>
+    <h2>转发规则管理</h2>
+  </div>
+  <p>通过 <code>/forward</code> 命令组在 Telegram 中直接管理 <code>forward_rules</code> 表，无需手动写 SQL 或重启服务。规则保存后立即生效，由 <code>channel.mirror</code>（频道源）和 <code>message.forwarder</code>（私聊/普通群源）插件在收到新消息时实时查询数据库。</p>
+
+  <h3>子命令一览</h3>
+  <pre><code><span style="color:var(--text-dim)"># 列出全部规则</span>
+/forward
+/forward list
+
+<span style="color:var(--text-dim)"># 添加规则（mode 默认 forward，filter_type 默认 none）</span>
+/forward add news -1001234567890 -1009876543210
+/forward add news -1001234567890 -1009876543210 copy_clean
+
+<span style="color:var(--text-dim)"># 启用/禁用切换（不删除）</span>
+/forward toggle news
+
+<span style="color:var(--text-dim)"># 修改单个字段</span>
+/forward edit news mode copy
+/forward edit news filter 比特币
+/forward edit news ftype keyword
+/forward edit news note "BTC 行情同步"
+
+<span style="color:var(--text-dim)"># 删除规则</span>
+/forward remove news
+/forward del news    <span style="color:var(--text-dim)"># 别名</span>
+/forward rm news     <span style="color:var(--text-dim)"># 别名</span></code></pre>
+
+  <h3>三种转发模式</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-blue">forward</span></div>
+      <p class="card-desc">标准转发，保留「转发自 XXX」标签。最透明的方式。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-green">copy</span></div>
+      <p class="card-desc">复制消息文本和媒体，无转发标签 — 看起来像原创发布。</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-purple">copy_clean</span></div>
+      <p class="card-desc">委托 CopyCleanPlugin 进一步清理来源链接、用户名标签等痕迹。</p>
+    </div>
+  </div>
+
+  <h3>edit 可改字段</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>字段</th><th>对应列</th><th>合法值</th></tr></thead>
+    <tbody>
+      <tr><td><code>src</code></td><td>source_chat_id</td><td>整数（频道通常 -100 开头）</td></tr>
+      <tr><td><code>dst</code></td><td>target_chat_id</td><td>整数</td></tr>
+      <tr><td><code>mode</code></td><td>forward_type</td><td>forward / copy / copy_clean</td></tr>
+      <tr><td><code>filter</code></td><td>filter_pattern</td><td>关键词字符串或正则</td></tr>
+      <tr><td><code>ftype</code></td><td>filter_type</td><td>keyword / regex / none</td></tr>
+      <tr><td><code>note</code></td><td>note</td><td>任意文本备注</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div>规则添加时默认 <code>filter_type=none</code>（全转发）。要启用过滤，先 <code>/forward edit &lt;name&gt; ftype keyword</code>，再 <code>/forward edit &lt;name&gt; filter &lt;关键词&gt;</code>。</div>
+  </div>
+
+  <h3>消息流</h3>
+  <pre><code>Userbot 监听新消息 → 判断是否频道
+  ├─ 是频道 → channel.mirror.on_channel_message
+  └─ 非频道 → message.forwarder.on_new_message
+                  ↓
+            ForwardRuleRepository.get_by_source(chat_id)
+                  ↓
+            按 forward_type 派发：forward / copy / copy_clean</code></pre>
+
+  <p style="font-size:13px;color:var(--text-dim);margin-top:12px;"><code>ForwardHandler</code> 直接读写 DB，<strong>不走事件总线</strong> — 因为消费插件每次新消息都查 DB，无内存缓存需要刷新。</p>
+</section>
+
+<!-- ═══════════ 16.6 聊天检查工具 ═══════════ -->
+<section class="section" id="inspect">
+  <div class="section-header">
+    <div class="section-icon">🔍</div>
+    <h2>聊天检查工具</h2>
+  </div>
+  <p>为了让管理员能够快速获取目标聊天的 chat_id（配置 <code>/forward</code> 规则时必备），<code>InspectHandler</code> 提供两个辅助命令。</p>
+
+  <h3>/whereami — 当前位置 / 转发源</h3>
+  <p>三种使用方式，按优先级判定：</p>
+  <ol>
+    <li><strong>回复一条转发消息 + /whereami</strong> → 用 <code>telethon.utils.get_peer_id()</code> 解析转发源 chat_id（带 -100 前缀的标准格式），可直接用作 <code>/forward add</code> 的 src 参数。</li>
+    <li><strong>命令本身就是转发的</strong> → 同样解析转发源。</li>
+    <li><strong>普通调用</strong> → 打印当前 chat 的 ID、类型、名称及发送者 ID。</li>
+  </ol>
+
+  <pre><code><span style="color:var(--text-dim)"># 在目标群里执行（Bot 必须在场）</span>
+/whereami
+📍 当前位置
+chat_id = -1009876543210
+sender_id = 123456
+类型: Channel
+名称: 我的运营频道
+
+<span style="color:var(--text-dim)"># 私聊里回复一条转发消息</span>
+/whereami
+📍 转发来源
+chat_id = -1001234567890
+类型: 频道/超级群
+名称: 加密货币新闻</code></pre>
+
+  <h3>/dialogs — 列出/搜索最近会话</h3>
+  <p>当源频道禁止转发（受限频道）或不便手动操作时使用。通过 userbot 调用 <code>get_dialogs(limit=200)</code>，按标题模糊匹配并显示标准 chat_id。</p>
+
+  <pre><code><span style="color:var(--text-dim)"># 列出最近 200 个对话（显示前 30 条）</span>
+/dialogs
+
+<span style="color:var(--text-dim)"># 模糊搜索标题</span>
+/dialogs 比特币
+/dialogs news
+
+🔍 匹配 3 个对话
+
+📢 -1001234567890  Bitcoin News Daily
+📢 -1009876543210  CryptoNews CN
+👥 -100xxxxxxxxxx  News Insiders</code></pre>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>图标</th><th>类型</th></tr></thead>
+    <tbody>
+      <tr><td>📢</td><td>频道 / 超级群</td></tr>
+      <tr><td>👥</td><td>普通群组</td></tr>
+      <tr><td>👤</td><td>用户 / Bot</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout callout-info">
+    <span class="callout-icon">💡</span>
+    <div>调用走 <code>UserbotClient.get_dialogs()</code>，已经过 <code>RateLimiter</code> 包装，不会绕过防封号速率控制。</div>
+  </div>
+
+  <h3>典型工作流</h3>
+  <pre><code><span style="color:var(--text-dim)"># 步骤 1: 在目标群获取 dst_id</span>
+/whereami     →  dst = -1009876543210
+
+<span style="color:var(--text-dim)"># 步骤 2a: 从源频道转发任意消息到 Bot 私聊，回复 /whereami</span>
+/whereami     →  src = -1001234567890
+
+<span style="color:var(--text-dim)"># 步骤 2b（替代方案）: 受限频道用 /dialogs 搜索</span>
+/dialogs 加密  →  src = -1001234567890
+
+<span style="color:var(--text-dim)"># 步骤 3: 创建转发规则</span>
+/forward add crypto -1001234567890 -1009876543210
+
+<span style="color:var(--text-dim)"># 步骤 4: 验证</span>
+/forward list</code></pre>
+</section>
+
 <!-- ═══════════ 17. 命令大全 ═══════════ -->
 <section class="section" id="commands">
   <div class="section-header">
@@ -1392,6 +1549,13 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
   <div class="cmd-item"><span class="cmd-name">/keyword [list] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">列出所有监控关键词（默认子命令）</span></div>
   <div class="cmd-item"><span class="cmd-name">/keyword add &lt;关键词&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">添加监控关键词，立即生效</span></div>
   <div class="cmd-item"><span class="cmd-name">/keyword remove &lt;关键词&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">移除监控关键词（别名 <code>del</code>/<code>rm</code>）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/forward [list] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">列出所有转发规则</span></div>
+  <div class="cmd-item"><span class="cmd-name">/forward add &lt;name&gt; &lt;src&gt; &lt;dst&gt; [mode] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">添加规则；mode: forward / copy / copy_clean，默认 forward</span></div>
+  <div class="cmd-item"><span class="cmd-name">/forward remove &lt;name&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">删除规则（别名 <code>del</code>/<code>rm</code>）</span></div>
+  <div class="cmd-item"><span class="cmd-name">/forward toggle &lt;name&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">启用/禁用切换</span></div>
+  <div class="cmd-item"><span class="cmd-name">/forward edit &lt;name&gt; &lt;field&gt; &lt;value&gt; <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">修改字段：src / dst / mode / filter / ftype / note</span></div>
+  <div class="cmd-item"><span class="cmd-name">/whereami <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">打印当前 chat_id；回复转发消息时返回转发源 chat_id</span></div>
+  <div class="cmd-item"><span class="cmd-name">/dialogs [关键词] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">通过 userbot 列出/模糊搜索最近会话，便于获取 chat_id</span></div>
   <div class="cmd-item"><span class="cmd-name">/llm [name] <span class="cmd-badge admin">管理员</span></span><span class="cmd-desc">查看或切换默认 LLM Provider</span></div>
 
   <div class="callout callout-info">
@@ -1643,7 +1807,13 @@ await plugin.teardown()    <span style="color:var(--text-dim)"># 取消订阅、
   <details>
     <summary>如何添加转发规则？</summary>
     <div class="detail-content">
-      <p>当前版本通过直接在数据库 <code>forward_rules</code> 表中插入记录来管理。需要设置 <code>source_chat_id</code>、<code>target_chat_id</code>、<code>forward_type</code>。后续版本将添加 Bot 命令管理界面。</p>
+      <p>使用 <code>/forward</code> 命令组在 Telegram 中直接管理，规则立即生效无需重启：</p>
+      <pre><code>/forward add &lt;名称&gt; &lt;源 chat_id&gt; &lt;目标 chat_id&gt; [模式]
+/forward list
+/forward toggle &lt;名称&gt;
+/forward edit &lt;名称&gt; &lt;字段&gt; &lt;值&gt;
+/forward remove &lt;名称&gt;</code></pre>
+      <p>chat_id 可通过 <code>/whereami</code>（在目标群内或回复转发消息）或 <code>/dialogs &lt;关键词&gt;</code>（userbot 搜索最近会话）获取。详见「转发规则管理」和「聊天检查工具」章节。</p>
     </div>
   </details>
 
