@@ -23,6 +23,7 @@ env/
 .env
 *.session
 *.session-journal
+config/config.yaml
 
 # Database
 *.db
