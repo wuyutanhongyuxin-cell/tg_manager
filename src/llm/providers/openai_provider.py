@@ -25,7 +25,14 @@ class OpenAIProvider(BaseLLMProvider):
 
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
-        api_key = config.get("api_key", "")
+        api_key = (config.get("api_key") or "").strip()
+        # 空 api_key 会在 httpx 构造 "Bearer " header 时触发 LocalProtocolError
+        # 尾部空格是非法 header 值。提前校验并抛出清晰的错误信息。
+        if not api_key:
+            raise LLMError(
+                f"{self.name} api_key 未配置，"
+                f"请在 .env 中设置对应环境变量或切换到已配置的 provider"
+            )
         base_url = config.get("base_url", DEFAULT_BASE_URL) or DEFAULT_BASE_URL
         self._base_url = base_url.rstrip("/")
         timeout = config.get("timeout", DEFAULT_TIMEOUT)

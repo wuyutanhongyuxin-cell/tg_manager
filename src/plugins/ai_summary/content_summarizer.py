@@ -20,6 +20,12 @@ from src.plugins.plugin_base import PluginBase
 MAX_CONTENT_LENGTH = 8000
 # HTTP 请求超时（秒）
 FETCH_TIMEOUT = 15
+# 伪装真实浏览器的请求头 — Wikipedia 等站点会拒绝 python-httpx 默认 UA
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+}
 
 
 class ContentSummarizerPlugin(PluginBase):
@@ -61,7 +67,14 @@ class ContentSummarizerPlugin(PluginBase):
             # 1. 获取并提取正文
             content = await self._fetch_content(url)
             if not content:
-                await self.client.send_message(reply_to, "无法提取该 URL 的内容。")
+                await self.client.send_message(
+                    reply_to,
+                    "无法从该 URL 提取正文内容。\n"
+                    "可能原因：\n"
+                    "• 该页面是表单/登录墙/JS 动态渲染页（没有静态正文）\n"
+                    "• 目标网站屏蔽了爬虫\n"
+                    "• 网络层错误（请查看服务器日志）",
+                )
                 return
 
             # 2. 截断过长内容
@@ -92,9 +105,19 @@ class ContentSummarizerPlugin(PluginBase):
             return ""
 
         try:
-            async with httpx.AsyncClient(timeout=FETCH_TIMEOUT) as client:
+            async with httpx.AsyncClient(
+                timeout=FETCH_TIMEOUT,
+                headers=DEFAULT_HEADERS,
+            ) as client:
                 html = await self._fetch_with_safe_redirects(client, url, is_safe_url)
+        except httpx.HTTPStatusError as e:
+            # 4xx/5xx：目标站点明确拒绝或内部错误（反爬、登录墙、被封等）
+            self.logger.warning(
+                "获取 URL 被拒绝: %s — HTTP %s", url, e.response.status_code
+            )
+            return ""
         except httpx.RequestError as e:
+            # 网络层错误：DNS 失败、连接超时、重置等
             self.logger.warning("获取 URL 失败: %s — %s", url, e)
             return ""
 

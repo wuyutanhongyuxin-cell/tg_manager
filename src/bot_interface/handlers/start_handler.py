@@ -37,7 +37,9 @@ class StartHandler:
             "/status - 查看系统状态（管理员）\n"
             "/plugins - 查看已加载插件（管理员）\n"
             "/config - 查看配置摘要（管理员）\n"
+            "/llm [name] - 查看/切换 LLM Provider（管理员）\n"
             "/summarize [N] - 总结当前聊天最近 N 条消息（管理员）\n"
+            "/ask <问题> - 向 AI 提问（管理员）\n"
             "/url <链接> - 提取并总结网页内容（管理员）\n"
             "/schedule ... - 管理定时任务（管理员）"
         )

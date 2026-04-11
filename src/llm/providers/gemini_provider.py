@@ -23,7 +23,13 @@ class GeminiProvider(BaseLLMProvider):
 
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
-        self._api_key = config.get("api_key", "")
+        api_key = (config.get("api_key") or "").strip()
+        if not api_key:
+            raise LLMError(
+                "gemini api_key 未配置，"
+                "请在 .env 中设置 GEMINI_API_KEY 或切换到已配置的 provider"
+            )
+        self._api_key = api_key
         timeout = config.get("timeout", DEFAULT_TIMEOUT)
         self._client = httpx.AsyncClient(timeout=timeout)
 

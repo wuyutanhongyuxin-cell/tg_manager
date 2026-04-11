@@ -25,7 +25,12 @@ class ClaudeProvider(BaseLLMProvider):
         except ImportError as e:
             raise LLMError("anthropic 包未安装，请运行: pip install anthropic") from e
 
-        api_key = config.get("api_key", "")
+        api_key = (config.get("api_key") or "").strip()
+        if not api_key:
+            raise LLMError(
+                "claude api_key 未配置，"
+                "请在 .env 中设置 ANTHROPIC_API_KEY 或切换到已配置的 provider"
+            )
         timeout = config.get("timeout", DEFAULT_TIMEOUT)
         self._client = anthropic.AsyncAnthropic(
             api_key=api_key,

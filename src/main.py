@@ -11,6 +11,7 @@ import sys
 from src.bot_interface import CallbackRouter, CommandRouter
 from src.bot_interface.handlers.admin_handler import AdminHandler
 from src.bot_interface.handlers.config_handler import ConfigHandler
+from src.bot_interface.handlers.llm_handler import LLMHandler
 from src.bot_interface.handlers.plugin_handler import PluginHandler
 from src.bot_interface.handlers.start_handler import StartHandler
 from src.bot_interface.handlers.summary_handler import SummaryHandler
@@ -88,6 +89,7 @@ async def main() -> None:
     PluginHandler(config, plugin_manager).register(command_router, callback_router)
     ConfigHandler(config).register(command_router)
     SummaryHandler(config, event_bus).register(command_router)
+    LLMHandler(config, llm_manager).register(command_router)
 
     menu_pages = _build_menu_pages()
 

@@ -20,29 +20,13 @@ _registry: dict[str, type[BaseLLMProvider]] = {}
 
 
 def register_provider(name: str, cls: type[BaseLLMProvider]) -> None:
-    """注册一个 LLM Provider 类
-
-    Args:
-        name: Provider 标识名称（如 "openai"、"claude"）
-        cls: Provider 类（必须继承 BaseLLMProvider）
-    """
+    """注册一个 LLM Provider 类到全局注册表"""
     _registry[name] = cls
     logger.debug("已注册 LLM Provider: %s -> %s", name, cls.__name__)
 
 
 def create_provider(name: str, config: dict[str, Any]) -> BaseLLMProvider:
-    """根据名称创建 Provider 实例
-
-    Args:
-        name: Provider 标识名称
-        config: Provider 配置字典
-
-    Returns:
-        已初始化的 Provider 实例
-
-    Raises:
-        LLMError: Provider 未注册或创建失败
-    """
+    """根据名称创建 Provider 实例；未注册或构造失败时抛 LLMError"""
     cls = _registry.get(name)
     if cls is None:
         available = ", ".join(_registry.keys()) or "（无）"
@@ -53,32 +37,23 @@ def create_provider(name: str, config: dict[str, Any]) -> BaseLLMProvider:
         raise LLMError(f"创建 Provider '{name}' 失败: {e}") from e
 
 
-def get_available_providers() -> list[str]:
-    """获取所有已注册的 Provider 名称列表"""
-    return list(_registry.keys())
-
-
 class LLMManager:
     """LLM 管理器 — 根据全局配置创建和缓存 Provider 实例
 
-    在应用启动时初始化，提供统一的 Provider 获取入口。
+    启动时自动探测哪些 Provider 配好了 api_key（Ollama 例外，无需 key），
+    并把"不可用"的 Provider 从候选列表剔除。若配置指定的 default_provider
+    不可用，自动 fallback 到第一个可用的。
     """
 
     def __init__(self, config: Any) -> None:
-        """初始化 LLM 管理器
-
-        Args:
-            config: 全局配置对象，需包含 config.llm 段
-        """
         self._config = config
         self._providers: dict[str, BaseLLMProvider] = {}
         self._default_name: str = ""
+        # 启动时探测到的可用 provider 列表（按配置顺序）
+        self._available: list[str] = []
 
     def init(self) -> None:
-        """从配置中读取 LLM 设置，注册内置 Provider
-
-        在调用 get_provider() 之前必须先调用此方法。
-        """
+        """注册内置 Provider + 探测可用 Provider + 选定默认 Provider"""
         # 延迟导入，避免循环引用 + 按需注册
         from .providers.claude_provider import ClaudeProvider
         from .providers.deepseek_provider import DeepSeekProvider
@@ -93,24 +68,81 @@ class LLMManager:
         register_provider("ollama", OllamaProvider)
 
         llm_cfg = self._config.llm if hasattr(self._config, "llm") else {}
-        self._default_name = llm_cfg.get("default_provider", "openai")
+        providers_cfg = llm_cfg.get("providers", {}) or {}
+
+        # 探测哪些 provider 配置可用
+        self._available = [
+            name for name, cfg in providers_cfg.items()
+            if self._is_configured(name, cfg or {})
+        ]
+
+        # 选定默认 provider：优先使用配置的，不可用则 fallback 到第一个可用的
+        configured_default = llm_cfg.get("default_provider", "")
+        if configured_default in self._available:
+            self._default_name = configured_default
+        elif self._available:
+            self._default_name = self._available[0]
+            if configured_default:
+                logger.warning(
+                    "默认 Provider '%s' 未配置 api_key，自动切换到 '%s'",
+                    configured_default, self._default_name,
+                )
+        else:
+            self._default_name = ""
+            logger.warning(
+                "未发现任何已配置的 LLM Provider，AI 功能将不可用。"
+                "请在 .env 中设置至少一个 *_API_KEY 后重启"
+            )
+
         logger.info(
-            "LLM 管理器初始化完成，默认 Provider: %s", self._default_name
+            "LLM 管理器初始化完成，可用 Provider: %s，默认: %s",
+            self._available or "（无）", self._default_name or "（无）",
         )
 
-    def get_provider(self, name: str = "") -> BaseLLMProvider:
-        """获取指定名称的 Provider 实例（带缓存）
+    @staticmethod
+    def _is_configured(name: str, cfg: dict[str, Any]) -> bool:
+        """判断某个 provider 的配置是否可用
 
-        Args:
-            name: Provider 名称，空字符串使用默认 Provider
-
-        Returns:
-            Provider 实例
-
-        Raises:
-            LLMError: Provider 未配置或创建失败
+        规则：
+        - ollama: 只要配置了 base_url 就算可用（本地推理，无 api_key）
+        - 其他: api_key 非空且不是未展开的 ${...} 占位符
         """
+        if name == "ollama":
+            return bool((cfg.get("base_url") or "").strip())
+        api_key = (cfg.get("api_key") or "").strip()
+        if not api_key:
+            return False
+        # 环境变量未展开的情况（例如 .env 中没有定义该变量）
+        if api_key.startswith("${") and api_key.endswith("}"):
+            return False
+        return True
+
+    def list_available(self) -> list[str]:
+        """返回所有已配置可用的 provider 名称列表"""
+        return list(self._available)
+
+    def get_current_name(self) -> str:
+        """返回当前默认 provider 名称（可能为空字符串）"""
+        return self._default_name
+
+    def switch_default(self, name: str) -> None:
+        """运行时切换默认 provider；目标未配置/不可用时抛 LLMError"""
+        if name not in self._available:
+            available = ", ".join(self._available) or "（无）"
+            raise LLMError(
+                f"Provider '{name}' 未配置或不可用。可用: {available}"
+            )
+        self._default_name = name
+        logger.info("默认 LLM Provider 已切换为: %s", name)
+
+    def get_provider(self, name: str = "") -> BaseLLMProvider:
+        """获取指定名称的 Provider 实例（带缓存）；name 为空时使用默认"""
         provider_name = name or self._default_name
+        if not provider_name:
+            raise LLMError(
+                "未配置任何可用的 LLM Provider，"
+                "请在 .env 中设置至少一个 *_API_KEY 后重启"
+            )
         # 命中缓存直接返回
         if provider_name in self._providers:
             return self._providers[provider_name]
